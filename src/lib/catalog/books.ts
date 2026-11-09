@@ -30,13 +30,16 @@ const withKey = (url: URL) => {
 
 export async function searchBooks(q: string): Promise<Candidate[]> {
   const isbn = asIsbn(q);
-  const google = await searchGoogleBooks(isbn ? `isbn:${isbn}` : q);
+  const query = isbn ? `isbn:${isbn}` : q;
+  // Ediciones en español primero, y también sin filtro de idioma por si el libro no está traducido
+  const [es, any] = await Promise.all([searchGoogleBooks(query, "es"), searchGoogleBooks(query)]);
+  const google = es === null && any === null ? null : [...(es ?? []), ...(any ?? [])];
 
   // Si Google no da suficientes fichas con autor, completamos con Open Library
   const goodGoogle = (google ?? []).filter((b) => b.authors.length).length;
   const extra = google === null || goodGoogle < 3 ? await searchOpenLibrary(q) : [];
 
-  return rankBooks([...(google ?? []), ...extra]).map(toCandidate);
+  return rankBooks([...(google ?? []), ...extra], isbn ? "" : q).map(toCandidate);
 }
 
 function toCandidate(b: BookHit): Candidate {
@@ -52,9 +55,11 @@ function toCandidate(b: BookHit): Candidate {
 }
 
 /** null si Google Books no responde o agota el cupo. */
-async function searchGoogleBooks(q: string): Promise<BookHit[] | null> {
+async function searchGoogleBooks(q: string, lang?: string): Promise<BookHit[] | null> {
   const url = withKey(new URL(API));
   url.searchParams.set("q", q);
+  if (lang) url.searchParams.set("langRestrict", lang);
+  url.searchParams.set("country", "ES");
   url.searchParams.set("maxResults", "30");
   url.searchParams.set("printType", "books");
   url.searchParams.set("orderBy", "relevance");
