@@ -1,5 +1,6 @@
 import "server-only";
 import type { Candidate, CatalogDetails } from "./types";
+import { asIsbn, rankBooks, type BookHit } from "./book-ranking";
 
 const API = "https://www.googleapis.com/books/v1/volumes";
 
@@ -28,22 +29,53 @@ const withKey = (url: URL) => {
 };
 
 export async function searchBooks(q: string): Promise<Candidate[]> {
+  const isbn = asIsbn(q);
+  const google = await searchGoogleBooks(isbn ? `isbn:${isbn}` : q);
+
+  // Si Google no da suficientes fichas con autor, completamos con Open Library
+  const goodGoogle = (google ?? []).filter((b) => b.authors.length).length;
+  const extra = google === null || goodGoogle < 3 ? await searchOpenLibrary(q) : [];
+
+  return rankBooks([...(google ?? []), ...extra]).map(toCandidate);
+}
+
+function toCandidate(b: BookHit): Candidate {
+  return {
+    source: b.source,
+    source_id: b.source_id,
+    kind: "libro",
+    title: b.title,
+    year: b.year,
+    subtitle: b.authors.length ? b.authors.join(", ") : "Autor desconocido",
+    image_url: b.image_url,
+  };
+}
+
+/** null si Google Books no responde o agota el cupo. */
+async function searchGoogleBooks(q: string): Promise<BookHit[] | null> {
   const url = withKey(new URL(API));
   url.searchParams.set("q", q);
-  url.searchParams.set("maxResults", "10");
+  url.searchParams.set("maxResults", "30");
   url.searchParams.set("printType", "books");
-  const res = await fetch(url);
-  if (!res.ok) return searchOpenLibrary(q);
+  url.searchParams.set("orderBy", "relevance");
+  const res = await fetch(url).catch(() => null);
+  if (!res?.ok) return null;
   const data = (await res.json()) as { items?: Volume[] };
-  return (data.items ?? []).map((v) => ({
-    source: "google_books",
-    source_id: v.id,
-    kind: "libro",
-    title: v.volumeInfo.title,
-    year: yearOf(v.volumeInfo.publishedDate),
-    subtitle: v.volumeInfo.authors?.join(", ") ?? null,
-    image_url: https(v.volumeInfo.imageLinks?.thumbnail ?? v.volumeInfo.imageLinks?.smallThumbnail),
-  }));
+  return (data.items ?? []).map((v) => {
+    const i = v.volumeInfo;
+    const image = https(i.imageLinks?.thumbnail ?? i.imageLinks?.smallThumbnail);
+    return {
+      source: "google_books",
+      source_id: v.id,
+      kind: "libro",
+      title: i.subtitle ? `${i.title}: ${i.subtitle}` : i.title,
+      year: yearOf(i.publishedDate),
+      authors: i.authors ?? [],
+      language: i.language ?? null,
+      hasCover: Boolean(image),
+      image_url: image,
+    };
+  });
 }
 
 export async function bookDetails(id: string): Promise<CatalogDetails> {
@@ -72,16 +104,16 @@ export async function bookDetails(id: string): Promise<CatalogDetails> {
   };
 }
 
-/** Respaldo si Google Books falla o agota cuota. */
-async function searchOpenLibrary(q: string): Promise<Candidate[]> {
+/** Respaldo y complemento de Google Books. */
+async function searchOpenLibrary(q: string): Promise<BookHit[]> {
   const url = new URL("https://openlibrary.org/search.json");
   url.searchParams.set("q", q);
   url.searchParams.set("limit", "10");
-  url.searchParams.set("fields", "key,title,author_name,first_publish_year,cover_i");
-  const res = await fetch(url, { headers: { "User-Agent": "Recomendados/0.1" } });
-  if (!res.ok) return [];
+  url.searchParams.set("fields", "key,title,author_name,first_publish_year,cover_i,language");
+  const res = await fetch(url, { headers: { "User-Agent": "Recomendados/0.1" } }).catch(() => null);
+  if (!res?.ok) return [];
   const data = (await res.json()) as {
-    docs: { key: string; title: string; author_name?: string[]; first_publish_year?: number; cover_i?: number }[];
+    docs: { key: string; title: string; author_name?: string[]; first_publish_year?: number; cover_i?: number; language?: string[] }[];
   };
   return data.docs.map((d) => ({
     source: "openlibrary",
@@ -89,7 +121,9 @@ async function searchOpenLibrary(q: string): Promise<Candidate[]> {
     kind: "libro",
     title: d.title,
     year: d.first_publish_year ?? null,
-    subtitle: d.author_name?.join(", ") ?? null,
+    authors: d.author_name ?? [],
+    language: d.language?.includes("spa") ? "es" : null,
+    hasCover: Boolean(d.cover_i),
     image_url: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : null,
   }));
 }
