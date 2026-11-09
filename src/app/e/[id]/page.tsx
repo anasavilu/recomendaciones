@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { KIND_LABEL } from "@/lib/catalog/types";
-import { ENTRY_SELECT, type EntryRow } from "@/lib/entries";
+import { ENTRY_SELECT, loadSuggestions, personOf, type EntryRow } from "@/lib/entries";
 import { Cover } from "@/components/cover";
 import { RecommendedBy } from "@/components/recommended-by";
 import { EditEntry } from "./edit-entry";
@@ -44,15 +44,14 @@ async function Entry({
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const supabase = await createClient();
-  const [{ data }, { data: tags }, { data: people }] = await Promise.all([
+  const [{ data }, suggestions] = await Promise.all([
     supabase.from("entries").select(ENTRY_SELECT).eq("id", id).maybeSingle(),
-    supabase.from("tags").select("name").order("name"),
-    supabase.from("recommenders").select("name").order("name"),
+    loadSuggestions(supabase),
   ]);
   if (!data) notFound();
   const e = data as unknown as EntryRow;
   const c = e.catalog_items;
-  const who = e.entry_recommendations.map((r) => r.recommenders.name);
+  const who = e.entry_recommendations.map((r) => personOf(r.recommenders));
   const comments = e.entry_recommendations.filter((r) => r.comment);
   const streaming = (c.extra?.streaming_es as string[] | undefined) ?? [];
   const cast = (c.extra?.cast as string[] | undefined) ?? [];
@@ -76,7 +75,7 @@ async function Entry({
           <p className="text-sm text-ink-soft">{facts}</p>
           {c.creators?.length > 0 && <p className="text-sm">{c.creators.join(", ")}</p>}
           {c.address && <p className="text-sm">{c.address}</p>}
-          <RecommendedBy names={who} className="mt-2 text-2xl" />
+          <RecommendedBy people={who} className="mt-2 text-2xl" />
         </div>
       </div>
 
@@ -133,10 +132,10 @@ async function Entry({
         kind={c.kind}
         status={e.status}
         notes={e.notes ?? ""}
-        tags={e.entry_tags.map((t) => t.tags.name)}
+        tags={e.entry_tags.map((t) => ({ token: t.tags.name, name: t.tags.name }))}
         people={who}
-        tagSuggestions={(tags ?? []).map((t) => t.name)}
-        peopleSuggestions={(people ?? []).map((p) => p.name)}
+        tagSuggestions={suggestions.tags}
+        peopleSuggestions={suggestions.people}
       />
     </article>
   );

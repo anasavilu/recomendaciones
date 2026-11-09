@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { KIND_LABEL } from "@/lib/catalog/types";
-import { doneLabel, type EntryRow as Row } from "@/lib/entries";
+import { doneLabel, personOf, type EntryRow as Row } from "@/lib/entries";
 import { Cover } from "./cover";
 import { RecommendedBy } from "./recommended-by";
 
@@ -8,7 +8,7 @@ export function EntryRow({ entry }: { entry: Row }) {
   const c = entry.catalog_items;
   const meta = [KIND_LABEL[c.kind], c.year, c.creators?.[0] ?? c.address].filter(Boolean).join(", ");
   const tags = entry.entry_tags.map((t) => t.tags.name);
-  const who = entry.entry_recommendations.map((r) => r.recommenders.name);
+  const who = entry.entry_recommendations.map((r) => personOf(r.recommenders));
   const faded = entry.status === "hecho" || entry.status === "descartado";
 
   return (
@@ -22,7 +22,7 @@ export function EntryRow({ entry }: { entry: Row }) {
             {entry.status === "en_curso" && <span className="shrink-0 text-sm text-stamp">Empezado</span>}
           </div>
           <p className="truncate text-sm text-ink-soft">{meta}</p>
-          <RecommendedBy names={who} className="text-lg" />
+          <RecommendedBy people={who} className="text-lg" />
           {tags.length > 0 && (
             <ul className="mt-0.5 flex flex-wrap gap-1.5">
               {tags.map((t) => (

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { AddForm } from "./add-form";
+import { loadSuggestions } from "@/lib/entries";
 
 export default function NewPage() {
   return (
@@ -21,9 +22,6 @@ export default function NewPage() {
 
 async function WithSuggestions() {
   const supabase = await createClient();
-  const [{ data: tags }, { data: people }] = await Promise.all([
-    supabase.from("tags").select("name").order("name"),
-    supabase.from("recommenders").select("name").order("name"),
-  ]);
-  return <AddForm tagSuggestions={(tags ?? []).map((t) => t.name)} peopleSuggestions={(people ?? []).map((p) => p.name)} />;
+  const s = await loadSuggestions(supabase);
+  return <AddForm tagSuggestions={s.tags} peopleSuggestions={s.people} />;
 }

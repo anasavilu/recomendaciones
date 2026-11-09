@@ -5,17 +5,17 @@ import { useFormStatus } from "react-dom";
 import { deleteEntry, setStatus, updateEntry } from "../../actions";
 import type { Kind } from "@/lib/catalog/types";
 import type { Status } from "@/lib/entries";
-import { TokenInput } from "@/components/token-input";
+import { TokenInput, type Token } from "@/components/token-input";
 
 export function EditEntry(props: {
   entryId: string;
   kind: Kind;
   status: Status;
   notes: string;
-  tags: string[];
-  people: string[];
-  tagSuggestions: string[];
-  peopleSuggestions: string[];
+  tags: Token[];
+  people: Token[];
+  tagSuggestions: Token[];
+  peopleSuggestions: Token[];
 }) {
   const [status, setLocal] = useState(props.status);
   const [, start] = useTransition();

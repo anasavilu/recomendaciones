@@ -6,8 +6,8 @@ Stack: Next.js 16 (App Router) · Supabase (Postgres + login) · Tailwind 4 · P
 
 ## Puesta en marcha
 
-1. **Supabase**: crea un proyecto (región UE). En *SQL Editor*, pega y ejecuta `supabase/migrations/0001_init.sql`.
-2. En *Authentication → URL Configuration*, añade `http://localhost:3000/auth/callback` a *Redirect URLs* (y la URL de producción cuando la haya).
+1. **Supabase**: crea un proyecto (región UE). En *SQL Editor*, ejecuta en orden `supabase/migrations/0001_init.sql` y `0002_usuarios.sql`.
+2. En *Authentication → URL Configuration*: *Site URL* `http://localhost:3000` y en *Redirect URLs* `http://localhost:3000/auth/callback` (y la URL de producción cuando la haya). En *Authentication → Providers → Email*, deja activado *Email*; *Confirm email* puede estar activado (se pide confirmar el correo al registrarse) o no.
 3. Copia `.env.example` a `.env.local` y rellena las claves.
 4. `npm install` y `npm run dev` → http://localhost:3000
 
@@ -18,6 +18,8 @@ Stack: Next.js 16 (App Router) · Supabase (Postgres + login) · Tailwind 4 · P
 | `src/app/page.tsx` | Tu lista: búsqueda, filtros por tipo y estado, etiquetas y personas |
 | `src/app/nuevo/` | Añadir: buscar en catálogo o a mano, quién lo recomienda, etiquetas |
 | `src/app/e/[id]/` | Ficha y edición |
+| `src/app/login/` | Entrar con usuario o correo + contraseña, crear cuenta, recuperar contraseña |
+| `src/app/cuenta/` | Nombre, @usuario, cambiar contraseña, cerrar sesión |
 | `src/app/actions.ts` | Altas, cambios y bajas (server actions) |
 | `src/lib/catalog/` | Conectores: TMDB, Google Books / Open Library, Google Places |
 | `src/proxy.ts` | Mantiene la sesión y manda a `/login` si no la hay |
@@ -27,7 +29,8 @@ Stack: Next.js 16 (App Router) · Supabase (Postgres + login) · Tailwind 4 · P
 
 - `catalog_items`: fichas compartidas (una peli existe una vez aunque la guarden mil personas). Solo el servidor escribe aquí.
 - `entries`: la lista de cada usuario (estado, notas, valoración).
-- `recommenders`: personas que te recomiendan cosas. Nombre libre o, en la fase 2, enlazadas a otro usuario.
+- `profiles`: nombre y `@usuario` único de cada cuenta.
+- `recommenders`: personas que te recomiendan cosas. Nombre libre ("Maribel Verdú") o enlazada a otro usuario (`@ana`). En los formularios se escriben como `@usuario`.
 - `tags` + `entry_tags`, `entry_recommendations`: etiquetas y quién recomendó cada cosa.
 
 ## Pendiente antes de uso comercial
@@ -38,5 +41,5 @@ Stack: Next.js 16 (App Router) · Supabase (Postgres + login) · Tailwind 4 · P
 
 ## Fases siguientes
 
-2. Perfiles conectados ("viene de Ana") y búsqueda en lenguaje natural con IA.
+2. Que @ana vea lo que ha recomendado a otros, y búsqueda en lenguaje natural con IA.
 3. Bot de WhatsApp (API oficial de WhatsApp Business) que reutiliza `addEntry` y `search_entries`.

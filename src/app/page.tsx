@@ -2,9 +2,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { KINDS, KIND_PLURAL, type Kind } from "@/lib/catalog/types";
-import { ENTRY_SELECT, type EntryRow as Row } from "@/lib/entries";
+import { ENTRY_SELECT, loadSuggestions, type EntryRow as Row } from "@/lib/entries";
 import { EntryRow } from "@/components/entry-row";
-import { signOut } from "./actions";
 
 type View = "pendientes" | "hechos" | "todo";
 type Filters = { q: string; kind: Kind | null; view: View };
@@ -35,9 +34,9 @@ export default function Home({ searchParams }: PageProps<"/">) {
     <main className="mx-auto max-w-2xl px-4 pb-32 sm:px-6">
       <header className="flex items-center justify-between pt-6 pb-4">
         <h1 className="text-2xl font-semibold tracking-tight">Recomendados</h1>
-        <form action={signOut}>
-          <button className="text-sm text-ink-soft underline-offset-4 hover:underline">Salir</button>
-        </form>
+        <Link href="/cuenta" className="text-sm text-ink-soft underline-offset-4 hover:underline">
+          Mi cuenta
+        </Link>
       </header>
       <Suspense fallback={<p className="py-10 text-ink-soft">Cargando tu lista…</p>}>
         <Content searchParams={searchParams} />
@@ -72,11 +71,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
     query = query.in("id", (hits ?? []).map((h: { id: string }) => h.id));
   }
 
-  const [{ data, error }, { data: tags }, { data: people }] = await Promise.all([
-    query,
-    supabase.from("tags").select("name").order("name"),
-    supabase.from("recommenders").select("name").order("name"),
-  ]);
+  const [{ data, error }, { tags, people }] = await Promise.all([query, loadSuggestions(supabase)]);
   if (error) throw error;
   const entries = (data ?? []) as unknown as Row[];
 
@@ -138,13 +133,13 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
         <Empty filters={f} />
       )}
 
-      {!f.q && ((tags?.length ?? 0) > 0 || (people?.length ?? 0) > 0) && (
+      {!f.q && (tags.length > 0 || people.length > 0) && (
         <section className="mt-10 flex flex-col gap-6 text-sm">
-          {(tags?.length ?? 0) > 0 && (
+          {tags.length > 0 && (
             <div className="flex flex-col gap-2">
               <h2 className="text-ink-soft">Tus etiquetas</h2>
               <ul className="flex flex-wrap gap-2">
-                {tags!.map((t) => (
+                {tags.map((t) => (
                   <li key={t.name}>
                     <Link href={href(f, { q: t.name })} className="rounded bg-mustard-soft px-2 py-1">
                       {t.name}
@@ -154,14 +149,15 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
               </ul>
             </div>
           )}
-          {(people?.length ?? 0) > 0 && (
+          {people.length > 0 && (
             <div className="flex flex-col gap-2">
               <h2 className="text-ink-soft">Quién te recomienda</h2>
               <ul className="flex flex-wrap gap-x-4 gap-y-1">
-                {people!.map((p) => (
-                  <li key={p.name}>
-                    <Link href={href(f, { q: p.name })} className="hand text-xl">
+                {people.map((p) => (
+                  <li key={p.token}>
+                    <Link href={href(f, { q: p.token })} className="hand text-xl">
                       {p.name}
+                      {p.username && <span className="font-sans text-xs text-ink-soft"> @{p.username}</span>}
                     </Link>
                   </li>
                 ))}

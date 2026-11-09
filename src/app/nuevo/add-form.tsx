@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { addEntry } from "../actions";
 import { KIND_LABEL, type Candidate, type Kind } from "@/lib/catalog/types";
-import { TokenInput } from "@/components/token-input";
+import { TokenInput, type Token } from "@/components/token-input";
 import { Cover } from "@/components/cover";
 
 const PICKABLE: Kind[] = ["pelicula", "serie", "documental", "libro", "restaurante", "otro"];
@@ -20,7 +20,7 @@ const PLACEHOLDER: Record<Kind, string> = {
 
 type SearchState = { status: "idle" | "loading" | "done" | "error"; results: Candidate[]; catalog: boolean };
 
-export function AddForm({ tagSuggestions, peopleSuggestions }: { tagSuggestions: string[]; peopleSuggestions: string[] }) {
+export function AddForm({ tagSuggestions, peopleSuggestions }: { tagSuggestions: Token[]; peopleSuggestions: Token[] }) {
   const [kind, setKind] = useState<Kind>("pelicula");
   const [q, setQ] = useState("");
   const [raw, setSearch] = useState<SearchState & { key: string }>({ status: "idle", results: [], catalog: true, key: "" });
@@ -172,8 +172,8 @@ export function AddForm({ tagSuggestions, peopleSuggestions }: { tagSuggestions:
             label="¿Quién te lo ha recomendado?"
             variant="person"
             suggestions={peopleSuggestions}
-            placeholder="Mamá, Maribel, el podcast de…"
-            hint="Puedes poner varias personas."
+            placeholder="Mamá, @ana, el podcast de…"
+            hint="Escribe un nombre, o busca a alguien que use Recomendados por su nombre o @usuario."
           />
           <label className="flex flex-col gap-1.5">
             <span className="text-sm text-ink-soft">¿Qué te dijo? (opcional)</span>
