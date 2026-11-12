@@ -80,11 +80,8 @@ export function AddForm({
               onClick={() => {
                 if (k === kind) return;
                 setKind(k);
-                // Escribiendo a mano se conserva lo escrito; buscando, se empieza de cero en el nuevo tipo
-                if (!manual) {
-                  setQ("");
-                  setPicked(null);
-                }
+                // Se conserva lo escrito: la búsqueda se repite sola en el nuevo tipo
+                if (!manual) setPicked(null);
               }}
               aria-pressed={kind === k}
               className={`rounded-full border px-3.5 py-1.5 text-sm ${
