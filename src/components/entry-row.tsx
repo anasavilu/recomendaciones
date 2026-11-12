@@ -29,7 +29,9 @@ export function EntryRow({ entry }: { entry: Row }) {
   }, []);
 
   const label = doneLabel(c.kind);
-  const faded = done || entry.status === "descartado";
+  // Tachado y atenuado solo como transición, mientras la fila se va a la otra pestaña
+  const leaving = justChanged && done;
+  const faded = leaving || entry.status === "descartado";
 
   // Al desmarcar se vuelve al estado que tenía (p. ej. "Empezado"), o a pendiente
   const notDoneStatus = entry.status === "hecho" ? "pendiente" : entry.status;
@@ -63,7 +65,7 @@ export function EntryRow({ entry }: { entry: Row }) {
           <Cover src={c.image_url} kind={c.kind} title={c.title} size="sm" />
           <div className={`flex min-w-0 flex-1 flex-col gap-1 transition-opacity ${faded ? "opacity-60" : ""}`}>
             <div className="flex items-baseline justify-between gap-3">
-              <h3 className={`truncate text-[1.0625rem] font-semibold leading-snug ${done ? "line-through decoration-1" : ""}`}>
+              <h3 className={`truncate text-[1.0625rem] font-semibold leading-snug ${leaving ? "line-through decoration-1" : ""}`}>
                 {c.title}
               </h3>
               {!done && entry.status === "en_curso" && <span className="shrink-0 text-sm text-stamp">Empezado</span>}
