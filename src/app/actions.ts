@@ -184,7 +184,7 @@ export async function setWouldRecommend(entryId: string, value: boolean | null) 
     .eq("id", entryId)
     .eq("owner_id", user.id);
   if (error) throw error;
-  revalidatePath(`/e/${entryId}`);
+  // Sin revalidatePath: en una acción refresca la página al momento y la fila desaparecería
 }
 
 /**
@@ -200,5 +200,6 @@ export async function markDone(entryId: string, status: Status) {
     .eq("id", entryId)
     .eq("owner_id", user.id);
   if (error) throw error;
-  revalidatePath(`/e/${entryId}`);
+  // Sin revalidatePath a propósito: refrescaría la lista al instante y no daría tiempo a "Deshacer".
+  // La fila pide el refresco ella misma pasados unos segundos.
 }
