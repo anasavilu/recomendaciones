@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { KIND_LABEL } from "@/lib/catalog/types";
-import { doneLabel, personOf, type EntryRow as Row } from "@/lib/entries";
+import { doneLabel, personOf, type EntryRow as Row } from "@/lib/entry-format";
 import { Cover } from "./cover";
 import { RecommendedBy } from "./recommended-by";
 

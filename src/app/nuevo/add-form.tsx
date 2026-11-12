@@ -20,12 +20,22 @@ const PLACEHOLDER: Record<Kind, string> = {
 
 type SearchState = { status: "idle" | "loading" | "done" | "error"; results: Candidate[]; catalog: boolean };
 
-export function AddForm({ tagSuggestions, peopleSuggestions }: { tagSuggestions: Token[]; peopleSuggestions: Token[] }) {
-  const [kind, setKind] = useState<Kind>("pelicula");
-  const [q, setQ] = useState("");
+export type AddInitial = { kind?: Kind; q?: string; picked?: Candidate; manual?: boolean };
+
+export function AddForm({
+  tagSuggestions,
+  peopleSuggestions,
+  initial = {},
+}: {
+  tagSuggestions: Token[];
+  peopleSuggestions: Token[];
+  initial?: AddInitial;
+}) {
+  const [kind, setKind] = useState<Kind>(initial.picked?.kind ?? initial.kind ?? "pelicula");
+  const [q, setQ] = useState(initial.q ?? "");
   const [raw, setSearch] = useState<SearchState & { key: string }>({ status: "idle", results: [], catalog: true, key: "" });
-  const [picked, setPicked] = useState<Candidate | null>(null);
-  const [manual, setManual] = useState(false);
+  const [picked, setPicked] = useState<Candidate | null>(initial.picked ?? null);
+  const [manual, setManual] = useState(Boolean(initial.manual));
 
   const active = !picked && !manual && kind !== "otro" && q.trim().length >= 2;
   const key = `${kind}:${q.trim()}`;
@@ -68,8 +78,13 @@ export function AddForm({ tagSuggestions, peopleSuggestions }: { tagSuggestions:
               type="button"
               key={k}
               onClick={() => {
+                if (k === kind) return;
                 setKind(k);
-                reset();
+                // Escribiendo a mano se conserva lo escrito; buscando, se empieza de cero en el nuevo tipo
+                if (!manual) {
+                  setQ("");
+                  setPicked(null);
+                }
               }}
               aria-pressed={kind === k}
               className={`rounded-full border px-3.5 py-1.5 text-sm ${

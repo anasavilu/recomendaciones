@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { deleteEntry, setStatus, updateEntry } from "../../actions";
 import type { Kind } from "@/lib/catalog/types";
-import type { Status } from "@/lib/entries";
+import type { Status } from "@/lib/entry-format";
 import { TokenInput, type Token } from "@/components/token-input";
 
 export function EditEntry(props: {

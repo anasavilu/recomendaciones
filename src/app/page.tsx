@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { KINDS, KIND_PLURAL, type Kind } from "@/lib/catalog/types";
 import { ENTRY_SELECT, loadSuggestions, type EntryRow as Row } from "@/lib/entries";
 import { EntryRow } from "@/components/entry-row";
+import { HomeSearch } from "@/components/home-search";
 
 type View = "pendientes" | "hechos" | "todo";
 type Filters = { q: string; kind: Kind | null; view: View };
@@ -22,7 +23,7 @@ function parse(sp: Record<string, string | string[] | undefined>): Filters {
 function href(f: Filters, change: Partial<Filters>) {
   const n = { ...f, ...change };
   const p = new URLSearchParams();
-  if (n.q) p.set("q", n.q);
+  if (change.q) p.set("q", change.q);
   if (n.kind) p.set("tipo", n.kind);
   if (n.view !== "pendientes") p.set("ver", n.view);
   const s = p.toString();
@@ -65,34 +66,11 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
   if (f.view === "pendientes") query = query.in("status", ["pendiente", "en_curso"]);
   if (f.view === "hechos") query = query.eq("status", "hecho");
 
-  if (f.q) {
-    const { data: hits, error } = await supabase.rpc("search_entries", { q: f.q, kind_filter: f.kind });
-    if (error) throw error;
-    query = query.in("id", (hits ?? []).map((h: { id: string }) => h.id));
-  }
-
   const [{ data, error }, { tags, people }] = await Promise.all([query, loadSuggestions(supabase)]);
   if (error) throw error;
   const entries = (data ?? []) as unknown as Row[];
 
-  return (
-    <>
-      <form role="search" action="/" className="sticky top-0 z-10 -mx-4 bg-paper/95 px-4 pb-3 pt-1 backdrop-blur sm:-mx-6 sm:px-6">
-        {f.kind && <input type="hidden" name="tipo" value={f.kind} />}
-        {f.view !== "pendientes" && <input type="hidden" name="ver" value={f.view} />}
-        <label className="sr-only" htmlFor="q">
-          Buscar en tu lista
-        </label>
-        <input
-          id="q"
-          name="q"
-          type="search"
-          defaultValue={f.q}
-          placeholder="Comedia romántica, Maribel, Murakami…"
-          className="w-full rounded-full border border-rule bg-sheet px-5 py-3 text-base placeholder:text-ink-soft/70"
-        />
-      </form>
-
+  const chips = (
       <nav aria-label="Tipo" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6">
         <Chip active={!f.kind} href={href(f, { kind: null })}>
           Todo
@@ -103,7 +81,10 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
           </Chip>
         ))}
       </nav>
+  );
 
+  return (
+    <HomeSearch initialQ={f.q} kind={f.kind} filters={chips}>
       <nav aria-label="Estado" className="mt-4 flex gap-5 border-b border-rule text-sm">
         {(
           [
@@ -133,7 +114,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
         <Empty filters={f} />
       )}
 
-      {!f.q && (tags.length > 0 || people.length > 0) && (
+      {(tags.length > 0 || people.length > 0) && (
         <section className="mt-10 flex flex-col gap-6 text-sm">
           {tags.length > 0 && (
             <div className="flex flex-col gap-2">
@@ -166,7 +147,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
           )}
         </section>
       )}
-    </>
+    </HomeSearch>
   );
 }
 
@@ -185,24 +166,14 @@ function Chip({ active, href, children }: { active: boolean; href: string; child
 }
 
 function Empty({ filters }: { filters: Filters }) {
-  if (filters.q)
-    return (
-      <p className="py-12 text-ink-soft">
-        Nada en tu lista coincide con «{filters.q}». Prueba con otra palabra, o mira en{" "}
-        <Link className="underline" href={href(filters, { view: "todo" })}>
-          todo
-        </Link>
-        .
-      </p>
-    );
   if (filters.view === "hechos")
     return <p className="py-12 text-ink-soft">Cuando marques algo como visto, leído o ido, aparecerá aquí.</p>;
   return (
     <div className="flex flex-col gap-3 py-12">
       <p className="text-lg">Aquí irá lo que te recomienden.</p>
       <p className="text-ink-soft">
-        La próxima vez que alguien te diga «tienes que ver…», apúntalo con su nombre. Luego podrás buscar por
-        tema, por tipo o por persona.
+        Escribe arriba el título de algo que te hayan recomendado para añadirlo, con quién te lo dijo. Luego
+        podrás buscar por tema, por tipo o por persona.
       </p>
     </div>
   );

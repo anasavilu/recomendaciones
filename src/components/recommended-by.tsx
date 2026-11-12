@@ -1,4 +1,4 @@
-import type { Person } from "@/lib/entries";
+import type { Person } from "@/lib/entry-format";
 
 /** "de Ana y Maribel", escrito a mano. Los usuarios de la app llevan su @. */
 export function RecommendedBy({ people, className = "" }: { people: Person[]; className?: string }) {
