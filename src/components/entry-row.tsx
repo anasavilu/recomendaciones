@@ -101,7 +101,6 @@ export function EntryRow({ entry }: { entry: Row }) {
       </div>
       {justChanged && (
         <p role="status" className="-mt-2 mb-3 flex items-center gap-3 pl-[4.5rem] text-sm text-ink-soft">
-          {done ? `${label}. Pasa a «Ya hechos».` : "Vuelve a «Pendientes»."}
           <button type="button" onClick={() => toggle(!done, true)} className="font-semibold text-ink underline underline-offset-4">
             Deshacer
           </button>
