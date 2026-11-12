@@ -13,7 +13,7 @@ const STOP = new Set(
 
 // Resúmenes, guías de lectura, análisis… que Google mezcla con el libro de verdad
 const NOT_THE_BOOK =
-  /\b(resumen|guia de lectura|guia didactica|analisis de|study guide|summary of|summary and analysis|cuaderno de actividades|sparknotes|cliffsnotes)\b/;
+  /\b(resumen|guia de lectura|guia didactica|analisis de|study guide|summary of|summary and analysis|cuaderno de actividades|sparknotes|cliffsnotes|ideas clave|en practica|ejercicios resueltos|curso completo|basado en el libro|workbook)\b/;
 
 function terms(q: string) {
   return norm(q).split(" ").filter((t) => t.length > 1 && !STOP.has(t));
@@ -33,6 +33,9 @@ function score(b: BookHit, cov: number): number {
   if (b.hasCover) s += 2;
   if (b.year) s += 1;
   if (NOT_THE_BOOK.test(norm(b.title))) s -= 6;
+  // Los libros "derivados" suelen tener títulos larguísimos; el original, corto
+  const words = norm(b.title).split(" ").length;
+  if (words > 12) s -= 2;
   return s;
 }
 
