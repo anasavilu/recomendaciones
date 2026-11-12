@@ -1,16 +1,16 @@
 import type { Person } from "@/lib/entry-format";
 
-/** "de Ana y Maribel", escrito a mano. Los usuarios de la app llevan su @. */
+/** "Recomendado por Ana @ana y Maribel". Si nadie lo recomendó, no muestra nada. */
 export function RecommendedBy({ people, className = "" }: { people: Person[]; className?: string }) {
   if (!people.length) return null;
   return (
-    <span className={`hand ${className}`}>
-      de{" "}
+    <span className={className}>
+      <span className="font-sans text-[0.8125rem] text-ink-soft">Recomendado por </span>
       {people.map((p, i) => (
         <span key={p.token}>
-          {i > 0 && (i === people.length - 1 ? " y " : ", ")}
-          {p.name}
-          {p.username && <span className="font-sans text-[0.6em] text-ink-soft"> @{p.username}</span>}
+          {i > 0 && <span className="font-sans text-[0.8125rem] text-ink-soft">{i === people.length - 1 ? " y " : ", "}</span>}
+          <span className="hand">{p.name}</span>
+          {p.username && <span className="font-sans text-[0.8125rem] text-ink-soft"> @{p.username}</span>}
         </span>
       ))}
     </span>

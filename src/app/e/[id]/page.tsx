@@ -95,6 +95,9 @@ async function Entry({
           {c.creators?.length > 0 && <p className="text-sm">{c.creators.join(", ")}</p>}
           {c.address && <p className="text-sm">{c.address}</p>}
           <RecommendedBy people={who} className="mt-2 text-2xl" />
+          {e.status === "hecho" && e.would_recommend !== null && (
+            <p className="text-sm">{e.would_recommend ? "👍 Lo recomendarías" : "👎 No lo recomendarías"}</p>
+          )}
         </div>
       </div>
 
@@ -176,6 +179,7 @@ async function Entry({
         entryId={e.id}
         kind={c.kind}
         status={e.status}
+        wouldRecommend={e.would_recommend}
         notes={e.notes ?? ""}
         tags={e.entry_tags.map((t) => ({ token: t.tags.name, name: t.tags.name }))}
         people={who}

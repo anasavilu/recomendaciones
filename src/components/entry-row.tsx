@@ -8,6 +8,7 @@ import { KIND_LABEL } from "@/lib/catalog/types";
 import { doneLabel, personOf, type EntryRow as Row } from "@/lib/entry-format";
 import { Cover } from "./cover";
 import { RecommendedBy } from "./recommended-by";
+import { WouldRecommend } from "./would-recommend";
 
 const UNDO_MS = 4000;
 
@@ -33,6 +34,11 @@ export function EntryRow({ entry }: { entry: Row }) {
   // Al desmarcar se vuelve al estado que tenía (p. ej. "Empezado"), o a pendiente
   const notDoneStatus = entry.status === "hecho" ? "pendiente" : entry.status;
 
+  function scheduleRefresh() {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => router.refresh(), UNDO_MS);
+  }
+
   async function toggle(next: boolean, isUndo = false) {
     if (timer.current) clearTimeout(timer.current);
     const prev = done;
@@ -42,7 +48,7 @@ export function EntryRow({ entry }: { entry: Row }) {
     try {
       await markDone(entry.id, next ? "hecho" : notDoneStatus);
       // Pasados unos segundos, la lista se actualiza y la fila cambia de pestaña
-      if (!isUndo) timer.current = setTimeout(() => router.refresh(), UNDO_MS);
+      if (!isUndo) scheduleRefresh();
     } catch {
       setDone(prev);
       setJustChanged(false);
@@ -100,6 +106,17 @@ export function EntryRow({ entry }: { entry: Row }) {
             Deshacer
           </button>
         </p>
+      )}
+      {done && (
+        <div className="-mt-2 mb-3 pl-[4.5rem]">
+          {/* Si acabas de marcarlo, valorar da unos segundos más antes de que cambie de pestaña */}
+          <WouldRecommend
+            entryId={entry.id}
+            initial={entry.would_recommend}
+            compact
+            onChange={justChanged ? scheduleRefresh : undefined}
+          />
+        </div>
       )}
       {failed && (
         <p role="alert" className="-mt-2 mb-3 pl-[4.5rem] text-sm text-stamp">

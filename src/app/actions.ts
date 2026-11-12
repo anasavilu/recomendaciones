@@ -175,6 +175,18 @@ export async function signOut() {
   redirect("/login");
 }
 
+/** 👍 / 👎 «¿Lo recomendarías?»; null lo deja sin valorar. */
+export async function setWouldRecommend(entryId: string, value: boolean | null) {
+  const { supabase, user } = await requireUser();
+  const { error } = await supabase
+    .from("entries")
+    .update({ would_recommend: value })
+    .eq("id", entryId)
+    .eq("owner_id", user.id);
+  if (error) throw error;
+  revalidatePath(`/e/${entryId}`);
+}
+
 /**
  * Tic de la lista: marca como hecho, o lo devuelve al estado anterior.
  * No refresca la página al momento, para dar unos segundos de "Deshacer".

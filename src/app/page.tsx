@@ -7,7 +7,8 @@ import { EntryRow } from "@/components/entry-row";
 import { HomeSearch } from "@/components/home-search";
 
 type View = "pendientes" | "hechos" | "todo";
-type Filters = { q: string; kind: Kind | null; view: View };
+type Rec = "si" | "no" | null;
+type Filters = { q: string; kind: Kind | null; view: View; rec: Rec };
 
 function parse(sp: Record<string, string | string[] | undefined>): Filters {
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
@@ -17,6 +18,7 @@ function parse(sp: Record<string, string | string[] | undefined>): Filters {
     q: one(sp.q).trim(),
     kind: KINDS.includes(kind) ? kind : null,
     view: ["pendientes", "hechos", "todo"].includes(view) ? view : "pendientes",
+    rec: one(sp.rec) === "si" ? "si" : one(sp.rec) === "no" ? "no" : null,
   };
 }
 
@@ -26,6 +28,8 @@ function href(f: Filters, change: Partial<Filters>) {
   if (change.q) p.set("q", change.q);
   if (n.kind) p.set("tipo", n.kind);
   if (n.view !== "pendientes") p.set("ver", n.view);
+  // El filtro 👍/👎 solo tiene sentido en "Ya hechos"
+  if (n.view === "hechos" && n.rec) p.set("rec", n.rec);
   const s = p.toString();
   return s ? `/?${s}` : "/";
 }
@@ -65,6 +69,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
   if (f.kind) query = query.eq("catalog_items.kind", f.kind);
   if (f.view === "pendientes") query = query.in("status", ["pendiente", "en_curso"]);
   if (f.view === "hechos") query = query.eq("status", "hecho");
+  if (f.view === "hechos" && f.rec) query = query.eq("would_recommend", f.rec === "si");
 
   const [{ data, error }, { tags, people }] = await Promise.all([query, loadSuggestions(supabase)]);
   if (error) throw error;
@@ -103,6 +108,22 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
           </Link>
         ))}
       </nav>
+
+      {f.view === "hechos" && (
+        <nav aria-label="Lo recomendarías" className="mt-3 flex flex-wrap gap-2">
+          {(
+            [
+              [null, "Todos"],
+              ["si", "👍 Lo recomendaría"],
+              ["no", "👎 No lo recomendaría"],
+            ] as const
+          ).map(([r, label]) => (
+            <Chip key={label} active={f.rec === r} href={href(f, { rec: r })}>
+              {label}
+            </Chip>
+          ))}
+        </nav>
+      )}
 
       {entries.length > 0 ? (
         <ul className="divide-y divide-rule">
@@ -166,6 +187,14 @@ function Chip({ active, href, children }: { active: boolean; href: string; child
 }
 
 function Empty({ filters }: { filters: Filters }) {
+  if (filters.view === "hechos" && filters.rec)
+    return (
+      <p className="py-12 text-ink-soft">
+        {filters.rec === "si"
+          ? "Aún no has marcado nada con 👍. Cuando algo te guste, márcalo para tenerlo a mano al recomendar."
+          : "Nada marcado con 👎."}
+      </p>
+    );
   if (filters.view === "hechos")
     return <p className="py-12 text-ink-soft">Cuando marques algo como visto, leído o ido, aparecerá aquí.</p>;
   return (

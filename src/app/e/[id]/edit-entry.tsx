@@ -6,11 +6,13 @@ import { deleteEntry, setStatus, updateEntry } from "../../actions";
 import type { Kind } from "@/lib/catalog/types";
 import type { Status } from "@/lib/entry-format";
 import { TokenInput, type Token } from "@/components/token-input";
+import { WouldRecommend } from "@/components/would-recommend";
 
 export function EditEntry(props: {
   entryId: string;
   kind: Kind;
   status: Status;
+  wouldRecommend: boolean | null;
   notes: string;
   tags: Token[];
   people: Token[];
@@ -49,6 +51,11 @@ export function EditEntry(props: {
             </button>
           ))}
         </div>
+        {status === "hecho" && (
+          <div className="mt-4">
+            <WouldRecommend entryId={props.entryId} initial={props.wouldRecommend} />
+          </div>
+        )}
       </fieldset>
 
       <form
