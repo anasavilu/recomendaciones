@@ -15,8 +15,25 @@ const LINK_LABEL: Record<string, string> = {
   google_books: "Ficha en Google Books",
   openlibrary: "Ficha en Open Library",
   maps: "Abrir en Google Maps",
+  osm: "Ver en OpenStreetMap",
   web: "Web",
 };
+
+const DAYS: Record<string, string> = { Mo: "Lu", Tu: "Ma", We: "Mi", Th: "Ju", Fr: "Vi", Sa: "Sá", Su: "Do", PH: "Festivos" };
+
+/** "Mo-Fr 13:00-16:00; Su off" → "Lu-Vi 13:00-16:00 · Do cerrado" */
+function horario(raw: string) {
+  return raw
+    .split(";")
+    .map((part) =>
+      part
+        .trim()
+        .replace(/\b(Mo|Tu|We|Th|Fr|Sa|Su|PH)\b/g, (d) => DAYS[d])
+        .replace(/\boff\b|\bclosed\b/g, "cerrado"),
+    )
+    .filter(Boolean)
+    .join(" · ");
+}
 
 export default function EntryPage({ params, searchParams }: PageProps<"/e/[id]">) {
   return (
@@ -55,6 +72,8 @@ async function Entry({
   const comments = e.entry_recommendations.filter((r) => r.comment);
   const streaming = (c.extra?.streaming_es as string[] | undefined) ?? [];
   const cast = (c.extra?.cast as string[] | undefined) ?? [];
+  const hours = (c.extra?.opening_hours as string | null | undefined) ?? null;
+  const phone = (c.extra?.phone as string | null | undefined) ?? null;
   const facts = [KIND_LABEL[c.kind], c.year, c.genres?.slice(0, 3).join(", ")].filter(Boolean).join(" · ");
 
   return (
@@ -92,12 +111,28 @@ async function Entry({
 
       {c.summary && <p className="max-w-prose leading-relaxed">{c.summary}</p>}
 
-      {(cast.length > 0 || streaming.length > 0) && (
+      {(cast.length > 0 || streaming.length > 0 || hours || phone) && (
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
           {cast.length > 0 && (
             <>
               <dt className="text-ink-soft">Reparto</dt>
               <dd>{cast.join(", ")}</dd>
+            </>
+          )}
+          {hours && (
+            <>
+              <dt className="text-ink-soft">Horario</dt>
+              <dd className="break-words">{horario(hours)}</dd>
+            </>
+          )}
+          {phone && (
+            <>
+              <dt className="text-ink-soft">Teléfono</dt>
+              <dd>
+                <a href={`tel:${phone.replace(/\s/g, "")}`} className="underline underline-offset-4">
+                  {phone}
+                </a>
+              </dd>
             </>
           )}
           {streaming.length > 0 && (
@@ -119,6 +154,16 @@ async function Entry({
             </li>
           ))}
         </ul>
+      )}
+
+      {c.source === "osm" && (
+        <p className="text-xs text-ink-soft">
+          Datos ©{" "}
+          <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="underline">
+            colaboradores de OpenStreetMap
+          </a>
+          .
+        </p>
       )}
 
       {c.source === "tmdb" && (

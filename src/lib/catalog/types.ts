@@ -21,7 +21,7 @@ export const KIND_PLURAL: Record<Kind, string> = {
 
 /** Resultado de búsqueda en un catálogo (ligero, para elegir). */
 export type Candidate = {
-  source: "tmdb" | "google_books" | "openlibrary" | "google_places";
+  source: "tmdb" | "google_books" | "openlibrary" | "google_places" | "osm";
   source_id: string;
   kind: Kind;
   title: string;

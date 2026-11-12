@@ -14,7 +14,7 @@ const PLACEHOLDER: Record<Kind, string> = {
   serie: "Título de la serie",
   documental: "Título del documental",
   libro: "Título o autor",
-  restaurante: "Nombre y zona, p. ej. Sacha Madrid",
+  restaurante: "Nombre del sitio, p. ej. Casa Dani",
   otro: "Qué es",
 };
 
@@ -142,6 +142,9 @@ export function AddForm({
         <div className="flex items-center gap-4 rounded-lg border border-rule bg-sheet p-3">
           <input type="hidden" name="source" value={picked.source} />
           <input type="hidden" name="source_id" value={picked.source_id} />
+          <input type="hidden" name="picked_kind" value={picked.kind} />
+          <input type="hidden" name="picked_title" value={picked.title} />
+          <input type="hidden" name="picked_sub" value={picked.subtitle ?? ""} />
           <Cover src={picked.image_url ?? null} kind={picked.kind} title={picked.title} size="sm" />
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="font-semibold">{picked.title}</span>

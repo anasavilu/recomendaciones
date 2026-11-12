@@ -21,7 +21,7 @@ Stack: Next.js 16 (App Router) · Supabase (Postgres + login) · Tailwind 4 · P
 | `src/app/login/` | Entrar con usuario o correo + contraseña, crear cuenta, recuperar contraseña |
 | `src/app/cuenta/` | Nombre, @usuario, cambiar contraseña, cerrar sesión |
 | `src/app/actions.ts` | Altas, cambios y bajas (server actions) |
-| `src/lib/catalog/` | Conectores: TMDB, Google Books / Open Library, Google Places |
+| `src/lib/catalog/` | Conectores: TMDB, Google Books / Open Library, OpenStreetMap (restaurantes; Google Places preparado) |
 | `src/proxy.ts` | Mantiene la sesión y manda a `/login` si no la hay |
 | `supabase/migrations/` | Esquema, búsqueda (`search_entries`) y seguridad por fila |
 
@@ -36,7 +36,8 @@ Stack: Next.js 16 (App Router) · Supabase (Postgres + login) · Tailwind 4 · P
 ## Pendiente antes de uso comercial
 
 - **TMDB**: la clave gratuita es para uso no comercial; pedir licencia comercial.
-- **Google Places**: de pago por uso y con límites de almacenamiento de datos; revisar condiciones.
+- **Restaurantes (OpenStreetMap)**: datos ODbL, se pueden guardar citando la fuente (ya se cita en la ficha). Los servidores públicos de Photon y Nominatim son de uso razonable: con muchos usuarios, montar instancia propia o usar un proveedor. Antes de lanzar, identificar la app con un contacto real en las peticiones a Nominatim.
+- **Google Places** (si se activa): de pago por uso y solo permite guardar el place_id; revisar condiciones.
 - **RGPD**: aviso de privacidad, borrado de cuenta, encargado de tratamiento (Supabase en UE).
 
 ## Fases siguientes

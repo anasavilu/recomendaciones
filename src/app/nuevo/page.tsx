@@ -5,7 +5,7 @@ import { AddForm, type AddInitial } from "./add-form";
 import { KINDS, type Kind } from "@/lib/catalog/types";
 import { loadSuggestions } from "@/lib/entries";
 
-const SOURCES = ["tmdb", "google_books", "openlibrary", "google_places"] as const;
+const SOURCES = ["tmdb", "google_books", "openlibrary", "google_places", "osm"] as const;
 
 /** Lo que llega desde el buscador de la pantalla principal. */
 function initialFrom(sp: Record<string, string | string[] | undefined>): AddInitial {

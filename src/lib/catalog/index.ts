@@ -2,7 +2,8 @@ import "server-only";
 import type { Candidate, CatalogDetails, Kind } from "./types";
 import { searchTmdb, tmdbDetails } from "./tmdb";
 import { searchBooks, bookDetails, openLibraryDetails } from "./books";
-import { searchPlaces, placeDetails } from "./places";
+import { placeDetails } from "./places";
+import { searchRestaurants, osmDetails } from "./osm";
 
 export async function searchCatalog(q: string, kind: Kind): Promise<Candidate[]> {
   switch (kind) {
@@ -13,7 +14,7 @@ export async function searchCatalog(q: string, kind: Kind): Promise<Candidate[]>
     case "libro":
       return searchBooks(q);
     case "restaurante":
-      return searchPlaces(q);
+      return searchRestaurants(q);
     default:
       return [];
   }
@@ -27,6 +28,8 @@ export async function fetchDetails(source: string, sourceId: string): Promise<Ca
       return bookDetails(sourceId);
     case "openlibrary":
       return openLibraryDetails(sourceId);
+    case "osm":
+      return osmDetails(sourceId);
     case "google_places":
       return placeDetails(sourceId);
     default:

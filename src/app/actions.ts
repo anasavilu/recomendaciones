@@ -33,6 +33,40 @@ async function upsertCatalogItem(details: CatalogDetails): Promise<string> {
   return data.id;
 }
 
+/**
+ * La ficha se pide al catálogo desde el servidor (no nos fiamos de lo que manda el navegador).
+ * Si el catálogo no responde, se usa la ficha que ya tengamos guardada o, en último caso,
+ * una mínima con el título que se eligió, para no perder la recomendación.
+ */
+async function catalogIdFor(ref: CatalogDetails, formData: FormData): Promise<string> {
+  try {
+    return await upsertCatalogItem(await fetchDetails(ref.source, ref.source_id!));
+  } catch (e) {
+    console.warn(`[guardar] No se pudo pedir la ficha a ${ref.source}:`, (e as Error).message);
+    const admin = createAdminClient();
+    const { data: known } = await admin
+      .from("catalog_items")
+      .select("id")
+      .eq("source", ref.source)
+      .eq("source_id", ref.source_id!)
+      .maybeSingle();
+    if (known) return known.id;
+
+    const kind = String(formData.get("picked_kind")) as Kind;
+    const title = String(formData.get("picked_title") ?? "").trim().slice(0, 300);
+    if (!KINDS.includes(kind) || !title) throw e;
+    const sub = String(formData.get("picked_sub") ?? "").trim().slice(0, 200) || null;
+    return upsertCatalogItem({
+      kind,
+      source: ref.source,
+      source_id: ref.source_id,
+      title,
+      address: kind === "restaurante" ? sub : null,
+      creators: kind === "libro" && sub && sub !== "Autor desconocido" ? sub.split(", ") : [],
+    });
+  }
+}
+
 export async function addEntry(formData: FormData) {
   const { supabase, user } = await requireUser();
 
@@ -58,11 +92,10 @@ export async function addEntry(formData: FormData) {
       links: /^https?:\/\//.test(link) ? { web: link } : {},
     };
   } else {
-    // La ficha se resuelve en el servidor: no nos fiamos de datos de catálogo enviados por el navegador.
-    details = await fetchDetails(source, String(formData.get("source_id")));
+    details = { kind: "otro", source, source_id: String(formData.get("source_id") ?? ""), title: "" };
   }
 
-  const catalogItemId = await upsertCatalogItem(details);
+  const catalogItemId = details.source === "manual" ? await upsertCatalogItem(details) : await catalogIdFor(details, formData);
 
   // Si ya estaba en tu lista, se suma la recomendación en vez de duplicar.
   const { data: existing } = await supabase
@@ -140,4 +173,20 @@ export async function signOut() {
   const { supabase } = await requireUser();
   await supabase.auth.signOut();
   redirect("/login");
+}
+
+/**
+ * Tic de la lista: marca como hecho, o lo devuelve al estado anterior.
+ * No refresca la página al momento, para dar unos segundos de "Deshacer".
+ */
+export async function markDone(entryId: string, status: Status) {
+  if (!STATUSES.includes(status)) throw new Error("Estado no válido");
+  const { supabase, user } = await requireUser();
+  const { error } = await supabase
+    .from("entries")
+    .update({ status })
+    .eq("id", entryId)
+    .eq("owner_id", user.id);
+  if (error) throw error;
+  revalidatePath(`/e/${entryId}`);
 }

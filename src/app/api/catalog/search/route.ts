@@ -2,7 +2,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { searchCatalog } from "@/lib/catalog";
 import { KINDS, type Kind } from "@/lib/catalog/types";
-import { placesEnabled } from "@/lib/catalog/places";
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -17,7 +16,7 @@ export async function GET(request: NextRequest) {
   // Sin catálogo para ese tipo: la interfaz ofrece directamente el alta manual.
   const catalog =
     kind === "otro" ? false
-    : kind === "restaurante" ? placesEnabled()
+    : kind === "restaurante" ? true
     : kind === "libro" ? true
     : Boolean(process.env.TMDB_READ_TOKEN);
 
