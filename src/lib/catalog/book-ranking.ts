@@ -63,7 +63,8 @@ export function rankBooks(hits: BookHit[], q = "", limit = 10): BookHit[] {
     list = list.filter((x) => !x.b.language || x.b.language === "es" || x.b.language === "en");
   const withAuthor = list.filter((x) => x.b.authors.length);
   if (withAuthor.length >= 3) list = withAuthor;
-  if (list.length > 3) list = list.filter((x) => !NOT_THE_BOOK.test(norm(x.b.title)));
+  // Resúmenes y guías fuera siempre, salvo que se busque justo eso
+  if (!NOT_THE_BOOK.test(norm(q))) list = list.filter((x) => !NOT_THE_BOOK.test(norm(x.b.title)));
 
   return list.slice(0, limit).map((x) => x.b);
 }

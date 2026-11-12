@@ -28,18 +28,30 @@ const withKey = (url: URL) => {
   return url;
 };
 
+// Caché en memoria para no gastar cupo de Google repitiendo la misma búsqueda
+const CACHE_MS = 10 * 60 * 1000;
+const cache = new Map<string, { at: number; results: Candidate[] }>();
+
 export async function searchBooks(q: string): Promise<Candidate[]> {
   const isbn = asIsbn(q);
+  const key = q.trim().toLowerCase();
+  const cached = cache.get(key);
+  if (cached && cached.at > Date.now() - CACHE_MS) return cached.results;
+
   const query = isbn ? `isbn:${isbn}` : q;
-  // Ediciones en español primero, y también sin filtro de idioma por si el libro no está traducido
-  const [es, any] = await Promise.all([searchGoogleBooks(query, "es"), searchGoogleBooks(query)]);
+  // Primero ediciones en español; solo si no basta, una segunda búsqueda sin filtro de idioma
+  const es = await searchGoogleBooks(query, "es");
+  const enoughEs = (es ?? []).filter((b) => b.authors.length).length >= 3;
+  const any = es !== null && !enoughEs ? await searchGoogleBooks(query) : null;
   const google = es === null && any === null ? null : [...(es ?? []), ...(any ?? [])];
 
-  // Si Google no da suficientes fichas con autor, completamos con Open Library
+  // Si Google falla o da pocas fichas con autor, completamos con Open Library
   const goodGoogle = (google ?? []).filter((b) => b.authors.length).length;
   const extra = google === null || goodGoogle < 3 ? await searchOpenLibrary(q) : [];
 
-  return rankBooks([...(google ?? []), ...extra], isbn ? "" : q).map(toCandidate);
+  const results = rankBooks([...(google ?? []), ...extra], isbn ? "" : q).map(toCandidate);
+  if (google !== null) cache.set(key, { at: Date.now(), results });
+  return results;
 }
 
 function toCandidate(b: BookHit): Candidate {
@@ -63,8 +75,19 @@ async function searchGoogleBooks(q: string, lang?: string): Promise<BookHit[] | 
   url.searchParams.set("maxResults", "30");
   url.searchParams.set("printType", "books");
   url.searchParams.set("orderBy", "relevance");
-  const res = await fetch(url).catch(() => null);
-  if (!res?.ok) return null;
+  const res = await fetch(url).catch((e) => {
+    console.warn("[libros] Google Books no responde:", (e as Error).message);
+    return null;
+  });
+  if (!res) return null;
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.warn(
+      `[libros] Google Books respondió ${res.status}${res.status === 429 ? " (cupo agotado: falta GOOGLE_BOOKS_API_KEY o se ha pasado del límite diario)" : ""}`,
+      body.slice(0, 200),
+    );
+    return null;
+  }
   const data = (await res.json()) as { items?: Volume[] };
   return (data.items ?? []).map((v) => {
     const i = v.volumeInfo;
@@ -113,7 +136,8 @@ export async function bookDetails(id: string): Promise<CatalogDetails> {
 async function searchOpenLibrary(q: string): Promise<BookHit[]> {
   const url = new URL("https://openlibrary.org/search.json");
   url.searchParams.set("q", q);
-  url.searchParams.set("limit", "10");
+  url.searchParams.set("limit", "20");
+  url.searchParams.set("lang", "es");
   url.searchParams.set("fields", "key,title,author_name,first_publish_year,cover_i,language");
   const res = await fetch(url, { headers: { "User-Agent": "Recomendados/0.1" } }).catch(() => null);
   if (!res?.ok) return [];
