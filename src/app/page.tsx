@@ -6,10 +6,19 @@ import { ENTRY_SELECT, loadSuggestions, type EntryRow as Row } from "@/lib/entri
 import { EntryRow } from "@/components/entry-row";
 import { HomeSearch } from "@/components/home-search";
 import { FeedbackForm } from "./comentarios/form";
+import { FacetSelect } from "@/components/facet-select";
+import { FACETS, facetOptions, facetValues } from "@/lib/facets";
 
 type View = "pendientes" | "hechos" | "todo";
 type Rec = "si" | "no" | null;
-type Filters = { q: string; kind: Kind | null; view: View; rec: Rec };
+type Filters = {
+  q: string;
+  kind: Kind | null;
+  view: View;
+  rec: Rec;
+  genero: string | null;
+  plataforma: string | null;
+};
 
 function parse(sp: Record<string, string | string[] | undefined>): Filters {
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
@@ -20,17 +29,26 @@ function parse(sp: Record<string, string | string[] | undefined>): Filters {
     kind: KINDS.includes(kind) ? kind : null,
     view: ["pendientes", "hechos", "todo"].includes(view) ? view : "pendientes",
     rec: one(sp.rec) === "si" ? "si" : one(sp.rec) === "no" ? "no" : null,
+    genero: one(sp.genero).trim().slice(0, 80) || null,
+    plataforma: one(sp.plataforma).trim().slice(0, 80) || null,
   };
 }
 
 function href(f: Filters, change: Partial<Filters>) {
   const n = { ...f, ...change };
+  // Género y plataforma dependen de la categoría: al cambiar de categoría se quitan
+  if ("kind" in change && change.kind !== f.kind) {
+    n.genero = change.genero ?? null;
+    n.plataforma = change.plataforma ?? null;
+  }
   const p = new URLSearchParams();
   if (change.q) p.set("q", change.q);
   if (n.kind) p.set("tipo", n.kind);
   if (n.view !== "pendientes") p.set("ver", n.view);
   // El filtro 👍/👎 solo tiene sentido en "Ya hechos"
   if (n.view === "hechos" && n.rec) p.set("rec", n.rec);
+  if (n.kind && n.genero) p.set("genero", n.genero);
+  if (n.kind && n.plataforma) p.set("plataforma", n.plataforma);
   const s = p.toString();
   return s ? `/?${s}` : "/";
 }
@@ -77,7 +95,24 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
 
   const [{ data, error }, { tags, people }] = await Promise.all([query, loadSuggestions(supabase)]);
   if (error) throw error;
-  const entries = (data ?? []) as unknown as Row[];
+  const all = (data ?? []) as unknown as Row[];
+
+  // Filtros de la categoría elegida: opciones sacadas de lo que tienes guardado
+  const facets = (f.kind && FACETS[f.kind]) || [];
+  const facetUI = facets
+    .map((fc) => {
+      const opts = facetOptions(all, fc.key);
+      const value = f[fc.key];
+      if (value && !opts.some((o) => o.value === value)) opts.unshift({ value, count: 0 });
+      return { ...fc, value, opts };
+    })
+    .filter((fc) => fc.opts.length > 0);
+  const entries = all.filter(
+    (e) =>
+      (!f.genero || facetValues(e, "genero").includes(f.genero)) &&
+      (!f.plataforma || facetValues(e, "plataforma").includes(f.plataforma)),
+  );
+  const filtering = Boolean(f.genero || f.plataforma);
 
   const chips = (
       <nav aria-label="Tipo" className="flex flex-wrap gap-1.5">
@@ -129,6 +164,26 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
         </nav>
       )}
 
+      {facetUI.length > 0 && (
+        <div aria-label="Filtros" role="group" className="mt-3 flex flex-wrap items-center gap-2">
+          {facetUI.map((fc) => (
+            <FacetSelect
+              key={fc.key}
+              label={fc.label}
+              value={fc.value}
+              allLabel={fc.all}
+              allHref={href(f, { [fc.key]: null })}
+              options={fc.opts.map((o) => ({ ...o, href: href(f, { [fc.key]: o.value }) }))}
+            />
+          ))}
+          {filtering && (
+            <Link href={href(f, { genero: null, plataforma: null })} className="text-sm text-ink-soft underline underline-offset-4">
+              Quitar filtros
+            </Link>
+          )}
+        </div>
+      )}
+
       {entries.length > 0 ? (
         <ul className="divide-y divide-rule">
           {entries.map((e) => (
@@ -136,7 +191,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
           ))}
         </ul>
       ) : (
-        <Empty filters={f} />
+        <Empty filters={f} filtering={filtering} />
       )}
 
       {(tags.length > 0 || people.length > 0) && (
@@ -190,7 +245,16 @@ function Chip({ active, href, children }: { active: boolean; href: string; child
   );
 }
 
-function Empty({ filters }: { filters: Filters }) {
+function Empty({ filters, filtering }: { filters: Filters; filtering: boolean }) {
+  if (filtering)
+    return (
+      <p className="py-12 text-ink-soft">
+        Nada con esos filtros en esta pestaña.{" "}
+        <Link href={href(filters, { genero: null, plataforma: null })} className="text-ink underline underline-offset-4">
+          Quitar filtros
+        </Link>
+      </p>
+    );
   if (filters.view === "hechos" && filters.rec)
     return (
       <p className="py-12 text-ink-soft">

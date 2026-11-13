@@ -1,6 +1,7 @@
 import "server-only";
 import type { Candidate, CatalogDetails } from "./types";
 import { asIsbn, rankBooks, type BookHit } from "./book-ranking";
+import { genreLabel } from "../facets";
 
 const API = "https://www.googleapis.com/books/v1/volumes";
 
@@ -112,7 +113,14 @@ export async function bookDetails(id: string): Promise<CatalogDetails> {
   const v = (await res.json()) as Volume;
   const i = v.volumeInfo;
   // Las categorías de Google vienen tipo "Fiction / Romance / Contemporary"
-  const genres = [...new Set((i.categories ?? []).flatMap((c) => c.split("/").map((s) => s.trim())))];
+  const genres = [
+    ...new Set(
+      (i.categories ?? [])
+        .flatMap((c) => c.split("/"))
+        .map((s) => genreLabel(s))
+        .filter((g): g is string => Boolean(g)),
+    ),
+  ];
   return {
     kind: "libro",
     source: "google_books",
@@ -182,7 +190,7 @@ export async function openLibraryDetails(key: string): Promise<CatalogDetails> {
     title: w.title,
     year: yearOf(w.first_publish_date),
     creators: authors.filter((a): a is string => Boolean(a)),
-    genres: (w.subjects ?? []).slice(0, 5),
+    genres: [...new Set((w.subjects ?? []).slice(0, 8).map((s) => genreLabel(s)).filter((g): g is string => Boolean(g)))].slice(0, 5),
     summary: typeof w.description === "string" ? w.description : (w.description?.value ?? null),
     image_url: w.covers?.[0] ? `https://covers.openlibrary.org/b/id/${w.covers[0]}-L.jpg` : null,
     links: { openlibrary: `https://openlibrary.org${key}` },

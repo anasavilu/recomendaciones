@@ -1,5 +1,6 @@
 import "server-only";
 import { type Candidate, type CatalogDetails, type Kind, filmaffinityUrl } from "./types";
+import { genreLabel } from "../facets";
 
 const API = "https://api.themoviedb.org/3";
 const IMG = "https://image.tmdb.org/t/p/w342";
@@ -96,7 +97,7 @@ export async function tmdbDetails(sourceId: string): Promise<CatalogDetails> {
     original_title: d.original_title ?? d.original_name ?? null,
     year: yearOf(d.release_date ?? d.first_air_date),
     creators,
-    genres: d.genres.map((g) => g.name),
+    genres: d.genres.map((g) => genreLabel(g.name, kind) ?? g.name),
     summary: d.overview || null,
     image_url: d.poster_path ? IMG + d.poster_path : null,
     links: {
