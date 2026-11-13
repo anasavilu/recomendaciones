@@ -52,6 +52,16 @@ async function Account({ searchParams }: { searchParams: PageProps<"/cuenta">["s
         <PasswordForm highlight={sp.restablecer === "1"} />
       </section>
 
+      <section className="flex flex-col gap-2 border-t border-rule pt-8">
+        <h2 className="text-lg font-semibold">Comentarios</h2>
+        <p className="text-sm text-ink-soft">
+          ¿Algo que no funciona o una idea?{" "}
+          <Link href="/comentarios" className="text-ink underline underline-offset-4">
+            Envíanos un comentario
+          </Link>
+        </p>
+      </section>
+
       <form action={signOut} className="border-t border-rule pt-8">
         <button className="text-sm text-stamp underline underline-offset-4">Cerrar sesión</button>
       </form>

@@ -46,6 +46,12 @@ export default function Home({ searchParams }: PageProps<"/">) {
       <Suspense fallback={<p className="py-10 text-ink-soft">Cargando tu lista…</p>}>
         <Content searchParams={searchParams} />
       </Suspense>
+      <p className="mt-12 text-sm text-ink-soft">
+        ¿Algo que mejorar?{" "}
+        <Link href="/comentarios" className="text-ink underline underline-offset-4">
+          Envíanos un comentario
+        </Link>
+      </p>
       <Link
         href="/nuevo"
         className="fixed bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-stamp px-7 py-3.5 text-base font-semibold text-stamp-ink shadow-[0_6px_20px_-6px_var(--stamp)]"
@@ -76,7 +82,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
   const entries = (data ?? []) as unknown as Row[];
 
   const chips = (
-      <nav aria-label="Tipo" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6">
+      <nav aria-label="Tipo" className="flex flex-wrap gap-1.5">
         <Chip active={!f.kind} href={href(f, { kind: null })}>
           Todo
         </Chip>
@@ -177,7 +183,7 @@ function Chip({ active, href, children }: { active: boolean; href: string; child
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm ${
+      className={`shrink-0 rounded-full border px-3 py-1 text-[0.8125rem] leading-5 ${
         active ? "border-ink bg-ink text-paper" : "border-rule bg-sheet text-ink"
       }`}
     >
