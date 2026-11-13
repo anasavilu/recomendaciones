@@ -7,7 +7,7 @@ import { KIND_LABEL, type Candidate, type Kind } from "@/lib/catalog/types";
 import { TokenInput, type Token } from "@/components/token-input";
 import { Cover } from "@/components/cover";
 
-const PICKABLE: Kind[] = ["pelicula", "serie", "documental", "libro", "restaurante", "otro"];
+const PICKABLE: Kind[] = ["pelicula", "serie", "documental", "libro", "restaurante", "lugar", "otro"];
 
 const PLACEHOLDER: Record<Kind, string> = {
   pelicula: "Título de la película",
@@ -15,6 +15,7 @@ const PLACEHOLDER: Record<Kind, string> = {
   documental: "Título del documental",
   libro: "Título o autor",
   restaurante: "Nombre del sitio, p. ej. Casa Dani",
+  lugar: "Casa rural, hotel, museo… p. ej. casa rural El Olivar",
   otro: "Qué es",
 };
 
@@ -163,7 +164,7 @@ export function AddForm({
           <input type="hidden" name="source" value="manual" />
           <input type="hidden" name="kind" value={kind} />
           <Field label="Título" name="title" required defaultValue={q} />
-          {kind === "restaurante" ? (
+          {kind === "restaurante" || kind === "lugar" ? (
             <Field label="Dirección o zona" name="address" />
           ) : kind !== "otro" ? (
             <div className="grid grid-cols-[1fr_7rem] gap-3">

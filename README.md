@@ -6,7 +6,7 @@ Stack: Next.js 16 (App Router) · Supabase (Postgres + login) · Tailwind 4 · P
 
 ## Puesta en marcha
 
-1. **Supabase**: crea un proyecto (región UE). En *SQL Editor*, ejecuta en orden los archivos de `supabase/migrations/` (`0001_init.sql`, `0002_usuarios.sql`, `0003_lo_recomendaria.sql`).
+1. **Supabase**: crea un proyecto (región UE). En *SQL Editor*, ejecuta en orden los archivos de `supabase/migrations/` (`0001_init.sql`, `0002_usuarios.sql`, `0003_lo_recomendaria.sql`, `0004_otros_lugares.sql`; esta última sola, en su propia consulta).
 2. En *Authentication → URL Configuration*: *Site URL* `http://localhost:3000` y en *Redirect URLs* `http://localhost:3000/auth/callback` (y la URL de producción cuando la haya). En *Authentication → Providers → Email*, deja activado *Email*; *Confirm email* puede estar activado (se pide confirmar el correo al registrarse) o no.
 3. Copia `.env.example` a `.env.local` y rellena las claves.
 4. `npm install` y `npm run dev` → http://localhost:3000
@@ -21,7 +21,7 @@ Stack: Next.js 16 (App Router) · Supabase (Postgres + login) · Tailwind 4 · P
 | `src/app/login/` | Entrar con usuario o correo + contraseña, crear cuenta, recuperar contraseña |
 | `src/app/cuenta/` | Nombre, @usuario, cambiar contraseña, cerrar sesión |
 | `src/app/actions.ts` | Altas, cambios y bajas (server actions) |
-| `src/lib/catalog/` | Conectores: TMDB, Google Books / Open Library, OpenStreetMap (restaurantes; Google Places preparado) |
+| `src/lib/catalog/` | Conectores: TMDB, Google Books / Open Library, Google Places (restaurantes y otros lugares; sin clave, restaurantes por OpenStreetMap) |
 | `src/proxy.ts` | Mantiene la sesión y manda a `/login` si no la hay |
 | `supabase/migrations/` | Esquema, búsqueda (`search_entries`) y seguridad por fila |
 
@@ -37,7 +37,7 @@ Stack: Next.js 16 (App Router) · Supabase (Postgres + login) · Tailwind 4 · P
 
 - **TMDB**: la clave gratuita es para uso no comercial; pedir licencia comercial.
 - **Restaurantes (OpenStreetMap)**: datos ODbL, se pueden guardar citando la fuente (ya se cita en la ficha). Los servidores públicos de Photon y Nominatim son de uso razonable: con muchos usuarios, montar instancia propia o usar un proveedor. Antes de lanzar, identificar la app con un contacto real en las peticiones a Nominatim.
-- **Google Places** (si se activa): de pago por uso y solo permite guardar el place_id; revisar condiciones.
+- **Google Places**: de pago por uso con cupo gratuito mensual por tramo (la búsqueda usa campos «Pro»; web, teléfono y horario son «Enterprise» y se piden solo al guardar). Sus condiciones solo permiten guardar indefinidamente el place_id: antes del lanzamiento comercial, refrescar periódicamente o pedir los datos al mostrar la ficha. Mostrar «Datos de Google Maps» (ya está en la ficha). Poner un presupuesto con alertas en Google Cloud.
 - **RGPD**: aviso de privacidad, borrado de cuenta, encargado de tratamiento (Supabase en UE).
 
 ## Fases siguientes

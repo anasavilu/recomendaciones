@@ -4,6 +4,7 @@ import { searchCatalog } from "@/lib/catalog";
 import { searchTmdb } from "@/lib/catalog/tmdb";
 import { searchBooks } from "@/lib/catalog/books";
 import { searchRestaurants } from "@/lib/catalog/osm";
+import { placesEnabled, searchPlaces } from "@/lib/catalog/places";
 import { KINDS, type Candidate, type Kind } from "@/lib/catalog/types";
 import { ENTRY_SELECT, type EntryRow } from "@/lib/entries";
 
@@ -66,11 +67,12 @@ async function searchAllCatalogs(q: string, kind: Kind | null): Promise<{ result
       return { results: [], failed: true };
     }
   }
-  // Sin tipo elegido: películas/series/documentales, libros y restaurantes
+  // Sin tipo elegido: películas/series/documentales, libros y sitios
   const settled = await Promise.allSettled([
     searchTmdb(q).then((r) => r.slice(0, 6)),
     searchBooks(q).then((r) => r.slice(0, 5)),
-    searchRestaurants(q).then((r) => r.slice(0, 3)),
+    // Una sola consulta a Google trae restaurantes y otros lugares
+    (placesEnabled() ? searchPlaces(q) : searchRestaurants(q)).then((r) => r.slice(0, 4)),
   ]);
   const lists = settled.map((s) => (s.status === "fulfilled" ? s.value : []));
   // Intercalar para que no salgan todas las pelis antes que cualquier libro

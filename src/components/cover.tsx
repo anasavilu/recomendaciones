@@ -6,6 +6,7 @@ const GLYPH: Record<Kind, string> = {
   documental: "🎞️",
   libro: "📖",
   restaurante: "🍽️",
+  lugar: "📍",
   otro: "✳️",
 };
 

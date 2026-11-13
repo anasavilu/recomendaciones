@@ -2,7 +2,7 @@ import "server-only";
 import type { Candidate, CatalogDetails, Kind } from "./types";
 import { searchTmdb, tmdbDetails } from "./tmdb";
 import { searchBooks, bookDetails, openLibraryDetails } from "./books";
-import { placeDetails } from "./places";
+import { placeDetails, placesEnabled, searchPlaces } from "./places";
 import { searchRestaurants, osmDetails } from "./osm";
 
 export async function searchCatalog(q: string, kind: Kind): Promise<Candidate[]> {
@@ -14,7 +14,10 @@ export async function searchCatalog(q: string, kind: Kind): Promise<Candidate[]>
     case "libro":
       return searchBooks(q);
     case "restaurante":
-      return searchRestaurants(q);
+      // Sin clave de Google, los restaurantes se buscan en OpenStreetMap
+      return placesEnabled() ? searchPlaces(q, "restaurante") : searchRestaurants(q);
+    case "lugar":
+      return placesEnabled() ? searchPlaces(q, "lugar") : [];
     default:
       return [];
   }

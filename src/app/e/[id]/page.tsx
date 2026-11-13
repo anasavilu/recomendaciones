@@ -73,6 +73,7 @@ async function Entry({
   const streaming = (c.extra?.streaming_es as string[] | undefined) ?? [];
   const cast = (c.extra?.cast as string[] | undefined) ?? [];
   const hours = (c.extra?.opening_hours as string | null | undefined) ?? null;
+  const hoursLines = (c.extra?.hours_lines as string[] | null | undefined) ?? null;
   const phone = (c.extra?.phone as string | null | undefined) ?? null;
   const facts = [KIND_LABEL[c.kind], c.year, c.genres?.slice(0, 3).join(", ")].filter(Boolean).join(" · ");
 
@@ -114,7 +115,7 @@ async function Entry({
 
       {c.summary && <p className="max-w-prose leading-relaxed">{c.summary}</p>}
 
-      {(cast.length > 0 || streaming.length > 0 || hours || phone) && (
+      {(cast.length > 0 || streaming.length > 0 || hours || hoursLines?.length || phone) && (
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
           {cast.length > 0 && (
             <>
@@ -122,7 +123,21 @@ async function Entry({
               <dd>{cast.join(", ")}</dd>
             </>
           )}
-          {hours && (
+          {hoursLines && hoursLines.length > 0 && (
+            <>
+              <dt className="text-ink-soft">Horario</dt>
+              <dd>
+                <ul>
+                  {hoursLines.map((l) => (
+                    <li key={l} className="first-letter:uppercase">
+                      {l}
+                    </li>
+                  ))}
+                </ul>
+              </dd>
+            </>
+          )}
+          {!hoursLines?.length && hours && (
             <>
               <dt className="text-ink-soft">Horario</dt>
               <dd className="break-words">{horario(hours)}</dd>
@@ -157,6 +172,12 @@ async function Entry({
             </li>
           ))}
         </ul>
+      )}
+
+      {c.source === "google_places" && (
+        <p className="text-xs text-ink-soft" translate="no">
+          Datos de Google Maps
+        </p>
       )}
 
       {c.source === "osm" && (

@@ -1,4 +1,4 @@
-export const KINDS = ["pelicula", "serie", "documental", "libro", "restaurante", "otro"] as const;
+export const KINDS = ["pelicula", "serie", "documental", "libro", "restaurante", "lugar", "otro"] as const;
 export type Kind = (typeof KINDS)[number];
 
 export const KIND_LABEL: Record<Kind, string> = {
@@ -7,6 +7,7 @@ export const KIND_LABEL: Record<Kind, string> = {
   documental: "Documental",
   libro: "Libro",
   restaurante: "Restaurante",
+  lugar: "Otro lugar",
   otro: "Otro",
 };
 
@@ -16,6 +17,7 @@ export const KIND_PLURAL: Record<Kind, string> = {
   documental: "Documentales",
   libro: "Libros",
   restaurante: "Restaurantes",
+  lugar: "Otros lugares",
   otro: "Otros",
 };
 
