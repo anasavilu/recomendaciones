@@ -3,6 +3,7 @@ import { type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { buildListContext } from "@/lib/assistant/context";
 import { systemPrompt } from "@/lib/assistant/prompt";
+import { runAssistant } from "@/lib/assistant/run";
 
 const MODEL = "claude-haiku-5-5";
 const MAX_TURNS = 12; // mensajes de historial que se envían
@@ -45,10 +46,7 @@ export async function POST(request: NextRequest) {
   const today = new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Madrid" });
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  const stream = client.messages.stream({
-    model: MODEL,
-    max_tokens: 700,
-    system: [
+  const system: Anthropic.TextBlockParam[] = [
       { type: "text", text: systemPrompt(list.name, today) },
       {
         type: "text",
@@ -56,25 +54,30 @@ export async function POST(request: NextRequest) {
         // La lista se repite en cada pregunta de la conversación: se cachea para que salga más barato
         cache_control: { type: "ephemeral" },
       },
-    ],
-    messages,
-  });
+  ];
 
   const encoder = new TextEncoder();
+  const abort = new AbortController();
   const readable = new ReadableStream({
     start(controller) {
-      stream.on("text", (delta) => controller.enqueue(encoder.encode(delta)));
-      stream
-        .finalMessage()
+      runAssistant({
+        client,
+        model: MODEL,
+        system,
+        messages,
+        signal: abort.signal,
+        onText: (delta) => controller.enqueue(encoder.encode(delta)),
+      })
         .then(() => controller.close())
         .catch((e: unknown) => {
+          if (abort.signal.aborted) return;
           console.warn("[asistente] Error de la API de Claude:", e instanceof Error ? e.message : e);
           controller.enqueue(encoder.encode("\n\n(No he podido terminar la respuesta. Prueba otra vez.)"));
           controller.close();
         });
     },
     cancel() {
-      stream.abort();
+      abort.abort();
     },
   });
   return new Response(readable, { headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } });

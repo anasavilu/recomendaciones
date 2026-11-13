@@ -200,7 +200,7 @@ export function HomeHeader() {
               <button type="button" onClick={reset} className="whitespace-nowrap underline underline-offset-4">
                 Nueva conversación
               </button>
-              <span className="text-right">Puede equivocarse.</span>
+              <span className="text-right">Puede equivocarse. Plataformas según JustWatch.</span>
             </div>
           )}
         </section>

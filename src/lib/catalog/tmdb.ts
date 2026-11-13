@@ -113,3 +113,111 @@ export async function tmdbDetails(sourceId: string): Promise<CatalogDetails> {
     },
   };
 }
+
+// ---------------------------------------------------------------------------
+// Disponibilidad en plataformas (España). Datos de JustWatch servidos por TMDB.
+// ---------------------------------------------------------------------------
+
+type Media = "movie" | "tv";
+const DAY = 24 * 3600 * 1000;
+const listCache = new Map<string, { at: number; data: unknown }>();
+
+async function cached<T>(key: string, load: () => Promise<T>): Promise<T> {
+  const hit = listCache.get(key);
+  if (hit && hit.at > Date.now() - DAY) return hit.data as T;
+  const data = await load();
+  listCache.set(key, { at: Date.now(), data });
+  return data;
+}
+
+const plain = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+/** Plataformas disponibles en España, con su id de TMDB. */
+async function providersES(media: Media) {
+  return cached(`providers:${media}`, async () => {
+    const d = await tmdb<{ results: { provider_id: number; provider_name: string }[] }>(`/watch/providers/${media}`, {
+      watch_region: "ES",
+    });
+    return d.results;
+  });
+}
+
+async function genresES(media: Media) {
+  return cached(`genres:${media}`, async () => (await tmdb<{ genres: { id: number; name: string }[] }>(`/genre/${media}/list`)).genres);
+}
+
+/** "netflix" → Netflix; "prime" → Amazon Prime Video; "hbo"/"max" → Max… */
+async function findProvider(media: Media, name: string) {
+  const list = await providersES(media);
+  const n = plain(name).replace(/^(hbo)$/, "max");
+  return (
+    list.find((p) => plain(p.provider_name) === n) ??
+    list.find((p) => plain(p.provider_name).startsWith(n)) ??
+    list.find((p) => plain(p.provider_name).includes(n) && !/channel|withads|conanuncios/.test(plain(p.provider_name)))
+  );
+}
+
+export type OnPlatform = { titulo: string; año: number | null; tipo: "película" | "serie"; generos: string[]; sinopsis: string };
+
+/** Lo más popular ahora en una plataforma en España, con filtro de géneros opcional. */
+export async function discoverOnPlatform(opts: {
+  plataforma: string;
+  tipo: "pelicula" | "serie";
+  generos?: string[];
+}): Promise<{ plataforma: string | null; resultados: OnPlatform[]; aviso?: string }> {
+  if (!enabled()) return { plataforma: null, resultados: [], aviso: "Catálogo de pelis no configurado." };
+  const media: Media = opts.tipo === "serie" ? "tv" : "movie";
+  const provider = await findProvider(media, opts.plataforma);
+  if (!provider) {
+    const names = (await providersES(media)).slice(0, 25).map((p) => p.provider_name).join(", ");
+    return { plataforma: null, resultados: [], aviso: `No encuentro la plataforma «${opts.plataforma}». Algunas disponibles: ${names}.` };
+  }
+  const allGenres = await genresES(media);
+  const genreIds = (opts.generos ?? [])
+    .map((g) => allGenres.find((x) => plain(x.name).includes(plain(g)) || plain(g).includes(plain(x.name)))?.id)
+    .filter((id): id is number => Boolean(id));
+  const params: Record<string, string> = {
+    watch_region: "ES",
+    with_watch_providers: String(provider.provider_id),
+    with_watch_monetization_types: "flatrate",
+    sort_by: "popularity.desc",
+    include_adult: "false",
+    "vote_count.gte": "50",
+  };
+  if (genreIds.length) params.with_genres = genreIds.join(",");
+  const d = await tmdb<{
+    results: { title?: string; name?: string; release_date?: string; first_air_date?: string; genre_ids: number[]; overview: string }[];
+  }>(`/discover/${media}`, params);
+  return {
+    plataforma: provider.provider_name,
+    resultados: d.results.slice(0, 15).map((r) => ({
+      titulo: (r.title ?? r.name)!,
+      año: yearOf(r.release_date ?? r.first_air_date),
+      tipo: media === "tv" ? "serie" : "película",
+      generos: r.genre_ids.map((id) => allGenres.find((g) => g.id === id)?.name).filter((g): g is string => Boolean(g)),
+      sinopsis: r.overview.slice(0, 160),
+    })),
+  };
+}
+
+/** En qué plataformas de España se puede ver un título ahora. */
+export async function whereToWatch(titulo: string): Promise<
+  { titulo: string; año: number | null; tipo: string; suscripcion: string[]; alquiler_o_compra: string[] } | { aviso: string }
+> {
+  if (!enabled()) return { aviso: "Catálogo de pelis no configurado." };
+  const found = await tmdb<{ results: MultiResult[] }>("/search/multi", { query: titulo, include_adult: "false" });
+  const r = found.results.find((x) => x.media_type === "movie" || x.media_type === "tv");
+  if (!r) return { aviso: `No encuentro «${titulo}».` };
+  const w = await tmdb<{
+    results?: Record<string, { flatrate?: { provider_name: string }[]; rent?: { provider_name: string }[]; buy?: { provider_name: string }[] }>;
+  }>(`/${r.media_type}/${r.id}/watch/providers`);
+  const es = w.results?.ES;
+  const names = (l?: { provider_name: string }[]) => [...new Set((l ?? []).map((p) => p.provider_name))];
+  return {
+    titulo: (r.title ?? r.name)!,
+    año: yearOf(r.release_date ?? r.first_air_date),
+    tipo: r.media_type === "tv" ? "serie" : "película",
+    suscripcion: names(es?.flatrate),
+    alquiler_o_compra: [...new Set([...names(es?.rent), ...names(es?.buy)])],
+  };
+}
