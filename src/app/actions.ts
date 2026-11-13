@@ -203,3 +203,10 @@ export async function markDone(entryId: string, status: Status) {
   // Sin revalidatePath a propósito: refrescaría la lista al instante y no daría tiempo a "Deshacer".
   // La fila pide el refresco ella misma pasados unos segundos.
 }
+
+/** Eliminar desde la lista (deslizando). Sin redirigir ni refrescar: la fila gestiona el "Deshacer". */
+export async function removeEntry(entryId: string) {
+  const { supabase, user } = await requireUser();
+  const { error } = await supabase.from("entries").delete().eq("id", entryId).eq("owner_id", user.id);
+  if (error) throw error;
+}
