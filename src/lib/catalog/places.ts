@@ -31,6 +31,8 @@ const DETAIL_FIELDS = [
   "websiteUri",
   "nationalPhoneNumber",
   "regularOpeningHours.weekdayDescriptions",
+  "rating",
+  "userRatingCount",
 ].join(",");
 
 // Tipos de Google que cuentan como "Restaurantes" (comer y beber); el resto es "Otros lugares"
@@ -53,6 +55,8 @@ type Place = {
   websiteUri?: string;
   nationalPhoneNumber?: string;
   regularOpeningHours?: { weekdayDescriptions?: string[] };
+  rating?: number;
+  userRatingCount?: number;
 };
 
 export function placesEnabled() {
@@ -162,6 +166,10 @@ export async function placeDetails(id: string): Promise<CatalogDetails> {
       // Ya viene en español y por días: "lunes: 13:00–16:00"
       hours_lines: p.regularOpeningHours?.weekdayDescriptions ?? null,
       place_type: p.primaryType ?? null,
+      // Nota de Google en el momento de guardar (o de la última actualización)
+      rating: p.rating ?? null,
+      rating_count: p.userRatingCount ?? null,
+      rated_at: new Date().toISOString().slice(0, 10),
     },
   };
 }

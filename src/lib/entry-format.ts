@@ -16,6 +16,7 @@ export type EntryRow = {
     id: string;
     kind: Kind;
     source: string;
+    source_id: string | null;
     title: string;
     original_title: string | null;
     year: number | null;
@@ -56,3 +57,13 @@ export function doneLabel(kind: Kind) {
   return kind === "libro" ? "Leído" : kind === "restaurante" ? "Ido" : "Visto";
 }
 
+
+/** "4,6 ★ · 1.234 opiniones en Google" (o null si no hay nota). */
+export function googleRating(extra: Record<string, unknown> | null | undefined, short = false): string | null {
+  const r = extra?.rating;
+  if (typeof r !== "number") return null;
+  const n = typeof extra?.rating_count === "number" ? (extra.rating_count as number) : null;
+  const stars = `${r.toLocaleString("es-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ★`;
+  if (short) return stars;
+  return n ? `${stars} · ${n.toLocaleString("es-ES")} opiniones en Google` : `${stars} en Google`;
+}

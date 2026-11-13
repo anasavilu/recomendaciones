@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { KIND_LABEL } from "@/lib/catalog/types";
-import { ENTRY_SELECT, loadSuggestions, personOf, type EntryRow } from "@/lib/entries";
+import { ENTRY_SELECT, googleRating, loadSuggestions, personOf, type EntryRow } from "@/lib/entries";
+import { createAdminClient } from "@/lib/supabase/server";
+import { placeDetails, placesEnabled } from "@/lib/catalog/places";
 import { Cover } from "@/components/cover";
 import { RecommendedBy } from "@/components/recommended-by";
 import { EditEntry } from "./edit-entry";
@@ -67,7 +69,24 @@ async function Entry({
   ]);
   if (!data) notFound();
   const e = data as unknown as EntryRow;
+  // Sitios de Google guardados antes de traer la nota: se actualizan una vez al abrir la ficha
+  const ci = e.catalog_items;
+  if (ci.source === "google_places" && ci.source_id && !("rated_at" in (ci.extra ?? {})) && placesEnabled()) {
+    try {
+      const fresh = await placeDetails(ci.source_id);
+      const { data: updated } = await createAdminClient()
+        .from("catalog_items")
+        .update({ extra: fresh.extra, genres: fresh.genres, links: fresh.links, address: fresh.address })
+        .eq("id", e.catalog_items.id)
+        .select("*")
+        .single();
+      if (updated) e.catalog_items = updated as EntryRow["catalog_items"];
+    } catch (err) {
+      console.warn("[lugares] No se pudo actualizar la ficha:", (err as Error).message);
+    }
+  }
   const c = e.catalog_items;
+  const rating = googleRating(c.extra);
   const who = e.entry_recommendations.map((r) => personOf(r.recommenders));
   const comments = e.entry_recommendations.filter((r) => r.comment);
   const streaming = (c.extra?.streaming_es as string[] | undefined) ?? [];
@@ -93,6 +112,7 @@ async function Entry({
             <p className="text-sm text-ink-soft italic">{c.original_title}</p>
           )}
           <p className="text-sm text-ink-soft">{facts}</p>
+          {rating && <p className="text-sm">{rating}</p>}
           {c.creators?.length > 0 && <p className="text-sm">{c.creators.join(", ")}</p>}
           {c.address && <p className="text-sm">{c.address}</p>}
           <RecommendedBy people={who} className="mt-2 text-2xl" />

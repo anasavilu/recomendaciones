@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { markDone, removeEntry } from "@/app/actions";
 import { KIND_LABEL } from "@/lib/catalog/types";
-import { doneLabel, personOf, type EntryRow as Row } from "@/lib/entry-format";
+import { doneLabel, googleRating, personOf, type EntryRow as Row } from "@/lib/entry-format";
 import { Cover } from "./cover";
 import { RecommendedBy } from "./recommended-by";
 import { WouldRecommend } from "./would-recommend";
@@ -18,7 +18,7 @@ const REVEAL = 96;
 export function EntryRow({ entry }: { entry: Row }) {
   const c = entry.catalog_items;
   const router = useRouter();
-  const meta = [KIND_LABEL[c.kind], c.year, c.creators?.[0] ?? c.address]
+  const meta = [KIND_LABEL[c.kind], googleRating(c.extra, true), c.year, c.creators?.[0] ?? c.address]
     .filter(Boolean)
     .join(", ");
   const tags = entry.entry_tags.map((t) => t.tags.name);

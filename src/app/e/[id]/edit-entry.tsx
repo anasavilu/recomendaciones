@@ -24,9 +24,11 @@ export function EditEntry(props: {
   const [saved, setSaved] = useState(false);
 
   const done = props.kind === "libro" ? "Leído" : props.kind === "restaurante" ? "Ido" : "Visto";
+  // En sitios no tiene sentido "Empezado"
+  const isPlace = props.kind === "restaurante" || props.kind === "lugar";
   const options: [Status, string][] = [
     ["pendiente", "Pendiente"],
-    ["en_curso", "Empezado"],
+    ...(isPlace ? [] : ([["en_curso", "Empezado"]] as [Status, string][])),
     ["hecho", done],
     ["descartado", "Descartado"],
   ];
@@ -35,7 +37,9 @@ export function EditEntry(props: {
     <section className="flex flex-col gap-7 border-t border-rule pt-7">
       <fieldset>
         <legend className="mb-2 text-sm text-ink-soft">Estado</legend>
-        <div className="grid grid-cols-4 overflow-hidden rounded-lg border border-rule text-sm">
+        <div
+          className={`grid overflow-hidden rounded-lg border border-rule text-sm ${options.length === 3 ? "grid-cols-3" : "grid-cols-4"}`}
+        >
           {options.map(([s, label]) => (
             <button
               key={s}
