@@ -5,6 +5,7 @@ import { KINDS, KIND_PLURAL, type Kind } from "@/lib/catalog/types";
 import { ENTRY_SELECT, loadSuggestions, type EntryRow as Row } from "@/lib/entries";
 import { EntryRow } from "@/components/entry-row";
 import { HomeSearch } from "@/components/home-search";
+import { FeedbackForm } from "./comentarios/form";
 
 type View = "pendientes" | "hechos" | "todo";
 type Rec = "si" | "no" | null;
@@ -36,7 +37,7 @@ function href(f: Filters, change: Partial<Filters>) {
 
 export default function Home({ searchParams }: PageProps<"/">) {
   return (
-    <main className="mx-auto max-w-2xl px-4 pb-32 sm:px-6">
+    <main className="mx-auto flex min-h-dvh max-w-2xl flex-col px-4 pb-28 sm:px-6">
       <header className="flex items-center justify-between pt-6 pb-4">
         <h1 className="text-2xl font-semibold tracking-tight">Recomendados</h1>
         <Link href="/cuenta" className="text-sm text-ink-soft underline-offset-4 hover:underline">
@@ -46,12 +47,9 @@ export default function Home({ searchParams }: PageProps<"/">) {
       <Suspense fallback={<p className="py-10 text-ink-soft">Cargando tu lista…</p>}>
         <Content searchParams={searchParams} />
       </Suspense>
-      <p className="mt-12 text-sm text-ink-soft">
-        ¿Algo que mejorar?{" "}
-        <Link href="/comentarios" className="text-ink underline underline-offset-4">
-          Envíanos un comentario
-        </Link>
-      </p>
+      <footer className="mt-auto border-t border-rule pt-6">
+        <FeedbackForm page="/" compact />
+      </footer>
       <Link
         href="/nuevo"
         className="fixed bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-stamp px-7 py-3.5 text-base font-semibold text-stamp-ink shadow-[0_6px_20px_-6px_var(--stamp)]"
