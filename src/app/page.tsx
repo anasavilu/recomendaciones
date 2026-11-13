@@ -5,6 +5,7 @@ import { KINDS, KIND_PLURAL, type Kind } from "@/lib/catalog/types";
 import { ENTRY_SELECT, loadSuggestions, type EntryRow as Row } from "@/lib/entries";
 import { EntryRow } from "@/components/entry-row";
 import { HomeSearch } from "@/components/home-search";
+import { HomeHeader } from "@/components/assistant";
 import { FeedbackForm } from "./comentarios/form";
 import { FacetSelect } from "@/components/facet-select";
 import { FACETS, facetOptions, facetValues } from "@/lib/facets";
@@ -56,12 +57,7 @@ function href(f: Filters, change: Partial<Filters>) {
 export default function Home({ searchParams }: PageProps<"/">) {
   return (
     <main className="mx-auto flex min-h-dvh max-w-2xl flex-col px-4 pb-28 sm:px-6">
-      <header className="flex items-center justify-between pt-6 pb-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Recomendados</h1>
-        <Link href="/cuenta" className="text-sm text-ink-soft underline-offset-4 hover:underline">
-          Mi cuenta
-        </Link>
-      </header>
+      <HomeHeader />
       <Suspense fallback={<p className="py-10 text-ink-soft">Cargando tu lista…</p>}>
         <Content searchParams={searchParams} />
       </Suspense>
