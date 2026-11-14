@@ -1,0 +1,8 @@
+# No subir a Vercel: muestras de datos, papelera, dependencias y claves locales
+muestras/
+_to_delete/
+Claude outputs/
+node_modules/
+.next/
+.env*
+!.env.example
