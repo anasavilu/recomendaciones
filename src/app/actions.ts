@@ -61,7 +61,7 @@ async function catalogIdFor(ref: CatalogDetails, formData: FormData): Promise<st
       source: ref.source,
       source_id: ref.source_id,
       title,
-      address: kind === "restaurante" || kind === "lugar" ? sub : null,
+      address: kind === "restaurante" || kind === "lugar" || kind === "evento" ? sub : null,
       creators: kind === "libro" && sub && sub !== "Autor desconocido" ? sub.split(", ") : [],
     });
   }

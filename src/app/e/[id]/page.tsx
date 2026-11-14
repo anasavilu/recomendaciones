@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { KIND_LABEL } from "@/lib/catalog/types";
-import { ENTRY_SELECT, googleRating, loadSuggestions, personOf, type EntryRow } from "@/lib/entries";
+import { ENTRY_SELECT, eventTiming, googleRating, loadSuggestions, personOf, type EntryRow } from "@/lib/entries";
+import { dateRange } from "@/lib/catalog/events/shared";
 import { createAdminClient } from "@/lib/supabase/server";
 import { placeDetails, placesEnabled } from "@/lib/catalog/places";
 import { Cover } from "@/components/cover";
@@ -87,6 +88,10 @@ async function Entry({
   }
   const c = e.catalog_items;
   const rating = googleRating(c.extra);
+  const timing = c.kind === "evento" ? eventTiming(c.extra) : null;
+  const eventWhen = timing ? dateRange(timing.start, timing.end) : null;
+  const eventTime = c.kind === "evento" ? ((c.extra?.time as string | null) ?? null) : null;
+  const eventPrice = c.kind === "evento" ? ((c.extra?.price as string | null) ?? null) : null;
   const who = e.entry_recommendations.map((r) => personOf(r.recommenders));
   const comments = e.entry_recommendations.filter((r) => r.comment);
   const streaming = (c.extra?.streaming_es as string[] | undefined) ?? [];
@@ -113,6 +118,11 @@ async function Entry({
           )}
           <p className="text-sm text-ink-soft">{facts}</p>
           {rating && <p className="text-sm">{rating}</p>}
+          {eventWhen && <p className="text-sm">{eventWhen}</p>}
+          {timing?.state === "soon" && (
+            <p className="text-sm font-semibold text-stamp">{timing.days === 0 ? "Acaba hoy" : `Acaba en ${timing.days} días`}</p>
+          )}
+          {timing?.state === "ended" && <p className="text-sm text-ink-soft">Ya terminó</p>}
           {c.creators?.length > 0 && <p className="text-sm">{c.creators.join(", ")}</p>}
           {c.address && <p className="text-sm">{c.address}</p>}
           <RecommendedBy people={who} className="mt-2 text-2xl" />
@@ -135,12 +145,24 @@ async function Entry({
 
       {c.summary && <p className="max-w-prose leading-relaxed">{c.summary}</p>}
 
-      {(cast.length > 0 || streaming.length > 0 || hours || hoursLines?.length || phone) && (
+      {(cast.length > 0 || streaming.length > 0 || hours || hoursLines?.length || phone || eventTime || eventPrice) && (
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
           {cast.length > 0 && (
             <>
               <dt className="text-ink-soft">Reparto</dt>
               <dd>{cast.join(", ")}</dd>
+            </>
+          )}
+          {eventTime && (
+            <>
+              <dt className="text-ink-soft">Horario</dt>
+              <dd>{eventTime}</dd>
+            </>
+          )}
+          {eventPrice && (
+            <>
+              <dt className="text-ink-soft">Precio</dt>
+              <dd>{eventPrice}</dd>
             </>
           )}
           {hoursLines && hoursLines.length > 0 && (
@@ -199,6 +221,11 @@ async function Entry({
           Datos de Google Maps
         </p>
       )}
+
+      {(c.source === "esmadrid" || c.source === "madrid_agenda") && (
+        <p className="text-xs text-ink-soft">Datos abiertos del Ayuntamiento de Madrid.</p>
+      )}
+      {c.source === "bcn_agenda" && <p className="text-xs text-ink-soft">Datos abiertos del Ayuntamiento de Barcelona (CC BY 4.0).</p>}
 
       {c.source === "osm" && (
         <p className="text-xs text-ink-soft">

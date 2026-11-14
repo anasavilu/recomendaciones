@@ -4,6 +4,7 @@ import { KIND_LABEL } from "@/lib/catalog/types";
 import { doneLabel, personOf, STATUS_LABEL, type EntryRow } from "@/lib/entry-format";
 import { ENTRY_SELECT } from "@/lib/entries";
 import { facetValues } from "@/lib/facets";
+import { dateRange } from "@/lib/catalog/events/shared";
 
 const MAX_ENTRIES = 400;
 
@@ -20,6 +21,8 @@ function line(e: EntryRow): string {
     `${KIND_LABEL[c.kind]}: ${c.title}${c.year ? ` (${c.year})` : ""}`,
     c.creators?.length ? `de ${c.creators.slice(0, 2).join(", ")}` : null,
     c.address ? `en ${c.address}` : null,
+    c.kind === "evento" ? dateRange((c.extra?.start as string) ?? null, (c.extra?.end as string) ?? null) : null,
+    c.kind === "evento" && c.extra?.price ? `precio: ${c.extra.price}` : null,
     `estado: ${status}`,
     e.would_recommend === true ? "lo recomendaría 👍" : e.would_recommend === false ? "no lo recomendaría 👎" : null,
     facetValues(e, "genero").length ? `tipo/género: ${facetValues(e, "genero").join(", ")}` : null,

@@ -6,7 +6,7 @@ Stack: Next.js 16 (App Router) · Supabase (Postgres + login) · Tailwind 4 · P
 
 ## Puesta en marcha
 
-1. **Supabase**: crea un proyecto (región UE). En *SQL Editor*, ejecuta en orden los archivos de `supabase/migrations/` (de `0001` a `0005`; la `0004` sola, en su propia consulta).
+1. **Supabase**: crea un proyecto (región UE). En *SQL Editor*, ejecuta en orden los archivos de `supabase/migrations/` (de `0001` a `0006`; la `0004` y la `0006`, cada una sola en su propia consulta).
 2. En *Authentication → URL Configuration*: *Site URL* `http://localhost:3000` y en *Redirect URLs* `http://localhost:3000/auth/callback` (y la URL de producción cuando la haya). En *Authentication → Providers → Email*, deja activado *Email*; *Confirm email* puede estar activado (se pide confirmar el correo al registrarse) o no.
 3. Copia `.env.example` a `.env.local` y rellena las claves.
 4. `npm install` y `npm run dev` → http://localhost:3000

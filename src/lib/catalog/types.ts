@@ -1,4 +1,4 @@
-export const KINDS = ["pelicula", "serie", "documental", "libro", "restaurante", "lugar", "otro"] as const;
+export const KINDS = ["pelicula", "serie", "documental", "libro", "restaurante", "lugar", "evento", "otro"] as const;
 export type Kind = (typeof KINDS)[number];
 
 export const KIND_LABEL: Record<Kind, string> = {
@@ -8,6 +8,7 @@ export const KIND_LABEL: Record<Kind, string> = {
   libro: "Libro",
   restaurante: "Restaurante",
   lugar: "Otro lugar",
+  evento: "Teatro o expo",
   otro: "Otro",
 };
 
@@ -18,12 +19,13 @@ export const KIND_PLURAL: Record<Kind, string> = {
   libro: "Libros",
   restaurante: "Restaurantes",
   lugar: "Otros lugares",
+  evento: "Teatro y expos",
   otro: "Otros",
 };
 
 /** Resultado de búsqueda en un catálogo (ligero, para elegir). */
 export type Candidate = {
-  source: "tmdb" | "google_books" | "openlibrary" | "google_places" | "osm";
+  source: "tmdb" | "google_books" | "openlibrary" | "google_places" | "osm" | "madrid_agenda" | "esmadrid" | "bcn_agenda" | "ticketmaster";
   source_id: string;
   kind: Kind;
   title: string;

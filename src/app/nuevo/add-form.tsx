@@ -7,7 +7,7 @@ import { KIND_LABEL, type Candidate, type Kind } from "@/lib/catalog/types";
 import { TokenInput, type Token } from "@/components/token-input";
 import { Cover } from "@/components/cover";
 
-const PICKABLE: Kind[] = ["pelicula", "serie", "documental", "libro", "restaurante", "lugar", "otro"];
+const PICKABLE: Kind[] = ["pelicula", "serie", "documental", "libro", "restaurante", "lugar", "evento", "otro"];
 
 const PLACEHOLDER: Record<Kind, string> = {
   pelicula: "Título de la película",
@@ -16,6 +16,7 @@ const PLACEHOLDER: Record<Kind, string> = {
   libro: "Título o autor",
   restaurante: "Nombre del sitio, p. ej. Casa Dani",
   lugar: "Casa rural, hotel, museo… p. ej. casa rural El Olivar",
+  evento: "Obra, exposición, musical… o la sala",
   otro: "Qué es",
 };
 

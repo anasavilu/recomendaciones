@@ -20,6 +20,7 @@ export const FACETS: Partial<Record<Kind, { key: FacetKey; label: string; all: s
   libro: [{ key: "genero", label: "Género", all: "Todos los géneros" }],
   restaurante: [{ key: "genero", label: "Tipo de comida", all: "Todos los tipos" }],
   lugar: [{ key: "genero", label: "Tipo", all: "Todos los tipos" }],
+  evento: [{ key: "genero", label: "Tipo", all: "Todos los tipos" }],
 };
 
 // Categorías de libros que llegan en inglés (Google Books / Open Library)
@@ -78,7 +79,7 @@ export function facetValues(entry: EntryRow, key: FacetKey): string[] {
   const genres = c.genres ?? [];
   let out: (string | null)[];
   if (c.kind === "restaurante") out = genres.map(foodLabel);
-  else if (c.kind === "lugar") out = genres.slice(0, 1).map((g) => cap(g.trim()) || null);
+  else if (c.kind === "lugar" || c.kind === "evento") out = genres.slice(0, 1).map((g) => cap(g.trim()) || null);
   else out = genres.map((g) => genreLabel(g, c.kind));
   // En documentales, "Documental" es redundante
   if (c.kind === "documental") out = out.filter((g) => g !== "Documental");

@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { deleteEntry, setStatus, updateEntry } from "../../actions";
 import type { Kind } from "@/lib/catalog/types";
-import type { Status } from "@/lib/entry-format";
+import { doneLabel, type Status } from "@/lib/entry-format";
 import { TokenInput, type Token } from "@/components/token-input";
 import { WouldRecommend } from "@/components/would-recommend";
 
@@ -23,9 +23,9 @@ export function EditEntry(props: {
   const [, start] = useTransition();
   const [saved, setSaved] = useState(false);
 
-  const done = props.kind === "libro" ? "Leído" : props.kind === "restaurante" ? "Ido" : "Visto";
+  const done = doneLabel(props.kind);
   // En sitios no tiene sentido "Empezado"
-  const isPlace = props.kind === "restaurante" || props.kind === "lugar";
+  const isPlace = props.kind === "restaurante" || props.kind === "lugar" || props.kind === "evento";
   const options: [Status, string][] = [
     ["pendiente", "Pendiente"],
     ...(isPlace ? [] : ([["en_curso", "Empezado"]] as [Status, string][])),

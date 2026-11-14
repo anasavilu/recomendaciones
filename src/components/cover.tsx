@@ -7,6 +7,7 @@ const GLYPH: Record<Kind, string> = {
   libro: "📖",
   restaurante: "🍽️",
   lugar: "📍",
+  evento: "🎭",
   otro: "✳️",
 };
 

@@ -4,6 +4,7 @@ import { searchTmdb, tmdbDetails } from "./tmdb";
 import { searchBooks, bookDetails, openLibraryDetails } from "./books";
 import { placeDetails, placesEnabled, searchPlaces } from "./places";
 import { searchRestaurants, osmDetails } from "./osm";
+import { searchEvents, eventDetails } from "./events";
 
 export async function searchCatalog(q: string, kind: Kind): Promise<Candidate[]> {
   switch (kind) {
@@ -18,6 +19,8 @@ export async function searchCatalog(q: string, kind: Kind): Promise<Candidate[]>
       return placesEnabled() ? searchPlaces(q, "restaurante") : searchRestaurants(q);
     case "lugar":
       return placesEnabled() ? searchPlaces(q, "lugar") : [];
+    case "evento":
+      return searchEvents(q);
     default:
       return [];
   }
@@ -33,6 +36,10 @@ export async function fetchDetails(source: string, sourceId: string): Promise<Ca
       return openLibraryDetails(sourceId);
     case "osm":
       return osmDetails(sourceId);
+    case "esmadrid":
+    case "madrid_agenda":
+    case "bcn_agenda":
+      return eventDetails(source, sourceId);
     case "google_places":
       return placeDetails(sourceId);
     default:

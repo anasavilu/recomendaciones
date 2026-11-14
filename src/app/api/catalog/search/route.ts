@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
     kind === "otro" ? false
     : kind === "restaurante" ? true
     : kind === "lugar" ? placesEnabled()
+    : kind === "evento" ? true
     : kind === "libro" ? true
     : Boolean(process.env.TMDB_READ_TOKEN);
 

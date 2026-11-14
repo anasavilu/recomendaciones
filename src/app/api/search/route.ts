@@ -5,6 +5,7 @@ import { searchTmdb } from "@/lib/catalog/tmdb";
 import { searchBooks } from "@/lib/catalog/books";
 import { searchRestaurants } from "@/lib/catalog/osm";
 import { placesEnabled, searchPlaces } from "@/lib/catalog/places";
+import { searchEvents } from "@/lib/catalog/events";
 import { KINDS, type Candidate, type Kind } from "@/lib/catalog/types";
 import { ENTRY_SELECT, type EntryRow } from "@/lib/entries";
 
@@ -73,6 +74,7 @@ async function searchAllCatalogs(q: string, kind: Kind | null): Promise<{ result
     searchBooks(q).then((r) => r.slice(0, 5)),
     // Una sola consulta a Google trae restaurantes y otros lugares
     (placesEnabled() ? searchPlaces(q) : searchRestaurants(q)).then((r) => r.slice(0, 4)),
+    searchEvents(q).then((r) => r.slice(0, 4)),
   ]);
   const lists = settled.map((s) => (s.status === "fulfilled" ? s.value : []));
   // Intercalar para que no salgan todas las pelis antes que cualquier libro

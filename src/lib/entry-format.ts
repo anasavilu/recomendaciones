@@ -54,7 +54,7 @@ export const STATUS_LABEL: Record<Status, string> = {
 };
 
 export function doneLabel(kind: Kind) {
-  return kind === "libro" ? "Leído" : kind === "restaurante" ? "Ido" : "Visto";
+  return kind === "libro" ? "Leído" : kind === "restaurante" || kind === "lugar" ? "Ido" : "Visto";
 }
 
 
@@ -66,4 +66,16 @@ export function googleRating(extra: Record<string, unknown> | null | undefined, 
   const stars = `${r.toLocaleString("es-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ★`;
   if (short) return stars;
   return n ? `${stars} · ${n.toLocaleString("es-ES")} opiniones en Google` : `${stars} en Google`;
+}
+
+/** Para teatro y exposiciones: fechas y si está a punto de acabar. */
+export function eventTiming(extra: Record<string, unknown> | null | undefined) {
+  const start = typeof extra?.start === "string" ? extra.start : null;
+  const end = typeof extra?.end === "string" ? extra.end : null;
+  const last = end ?? start;
+  if (!last) return null;
+  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" });
+  const days = Math.round((Date.parse(last) - Date.parse(today)) / 86_400_000);
+  const state = days < 0 ? "ended" : days <= 7 ? "soon" : "on";
+  return { start, end, days, state } as const;
 }

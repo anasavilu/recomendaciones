@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { markDone, removeEntry } from "@/app/actions";
 import { KIND_LABEL } from "@/lib/catalog/types";
-import { doneLabel, googleRating, personOf, type EntryRow as Row } from "@/lib/entry-format";
+import { doneLabel, eventTiming, googleRating, personOf, type EntryRow as Row } from "@/lib/entry-format";
+import { shortDate } from "@/lib/catalog/events/shared";
 import { Cover } from "./cover";
 import { RecommendedBy } from "./recommended-by";
 import { WouldRecommend } from "./would-recommend";
@@ -18,7 +19,15 @@ const REVEAL = 96;
 export function EntryRow({ entry }: { entry: Row }) {
   const c = entry.catalog_items;
   const router = useRouter();
-  const meta = [KIND_LABEL[c.kind], googleRating(c.extra, true), c.year, c.creators?.[0] ?? c.address]
+  const timing = c.kind === "evento" ? eventTiming(c.extra) : null;
+  const venue = c.kind === "evento" ? ((c.extra?.venue as string | null) ?? null) : null;
+  const meta = [
+    KIND_LABEL[c.kind],
+    googleRating(c.extra, true),
+    c.kind === "evento" ? null : c.year,
+    timing?.end ? `hasta ${shortDate(timing.end)}` : timing?.start ? shortDate(timing.start) : null,
+    venue ?? c.creators?.[0] ?? c.address,
+  ]
     .filter(Boolean)
     .join(", ");
   const tags = entry.entry_tags.map((t) => t.tags.name);
@@ -221,6 +230,12 @@ export function EntryRow({ entry }: { entry: Row }) {
                 {!done && entry.status === "en_curso" && (
                   <span className="shrink-0 text-sm text-stamp">Empezado</span>
                 )}
+                {!done && timing?.state === "soon" && (
+                  <span className="shrink-0 text-sm text-stamp">
+                    {timing.days === 0 ? "Acaba hoy" : `Acaba en ${timing.days} d`}
+                  </span>
+                )}
+                {!done && timing?.state === "ended" && <span className="shrink-0 text-sm text-ink-soft">Ya terminó</span>}
               </div>
               <p className="truncate text-sm text-ink-soft">{meta}</p>
               <RecommendedBy people={who} className="text-lg" />
