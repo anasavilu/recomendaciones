@@ -8,7 +8,7 @@ import { HomeSearch } from "@/components/home-search";
 import { NavLink } from "@/components/nav-link";
 import { HomeHeader } from "@/components/assistant";
 import { FeedbackForm } from "./comentarios/form";
-import { FacetSelect } from "@/components/facet-select";
+import { FilterSheet, type FilterSection } from "@/components/filter-sheet";
 import { FACETS, facetOptions, facetValues } from "@/lib/facets";
 import { personOf } from "@/lib/entry-format";
 import { norm } from "@/lib/text";
@@ -141,9 +141,103 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
       </nav>
   );
 
+  // ---- Panel de filtros ----
+  const clear = { fav: false, rec: null, genero: null, plataforma: null, de: null, etiqueta: null } as const;
+  const count = <T,>(list: Row[], pick: (e: Row) => T[], v: T) => list.filter((e) => pick(e).includes(v)).length;
+  const sections: FilterSection[] = [
+    {
+      title: "Favoritos",
+      options: [{ key: "fav", label: <>★ Solo favoritos</>, href: href(f, { fav: !f.fav }), active: f.fav }],
+    },
+  ];
+  if (f.view === "hechos")
+    sections.push({
+      title: "¿Lo recomendarías?",
+      options: (
+        [
+          [null, "Todos"],
+          ["si", "👍 Sí"],
+          ["no", "👎 No"],
+        ] as const
+      ).map(([r, label]) => ({ key: String(r), label, href: href(f, { rec: r }), active: f.rec === r })),
+    });
+  for (const fc of facetUI)
+    sections.push({
+      title: fc.label,
+      options: [
+        { key: "*", label: "Todos", href: href(f, { [fc.key]: null }), active: !fc.value },
+        ...fc.opts.map((o) => ({
+          key: o.value,
+          label: (
+            <>
+              {o.value} <span className="ml-1 opacity-60">{o.count}</span>
+            </>
+          ),
+          href: href(f, { [fc.key]: o.value }),
+          active: fc.value === o.value,
+        })),
+      ],
+    });
+  const peopleHere = people
+    .map((p) => ({ p, n: count(all, (e) => e.entry_recommendations.map((r) => personOf(r.recommenders).token), p.token) }))
+    .filter((x) => x.n > 0 || x.p.token === f.de)
+    .sort((a, b) => b.n - a.n);
+  if (peopleHere.length)
+    sections.push({
+      title: "Recomendado por",
+      options: [
+        { key: "*", label: "Cualquiera", href: href(f, { de: null }), active: !f.de },
+        ...peopleHere.map(({ p, n }) => ({
+          key: p.token,
+          label: (
+            <>
+              <span className="hand text-lg leading-none">{p.name}</span>
+              {p.username && <span className="ml-1 text-xs opacity-60">@{p.username}</span>}
+              <span className="ml-1.5 opacity-60">{n}</span>
+            </>
+          ),
+          href: href(f, { de: p.token }),
+          active: f.de === p.token,
+        })),
+      ],
+    });
+  const tagsHere = tags
+    .map((t) => ({ t, n: count(all, (e) => e.entry_tags.map((x) => norm(x.tags.name)), norm(t.name)) }))
+    .filter((x) => x.n > 0 || (f.etiqueta && norm(x.t.name) === norm(f.etiqueta)))
+    .sort((a, b) => b.n - a.n);
+  if (tagsHere.length)
+    sections.push({
+      title: "Etiquetas",
+      options: [
+        { key: "*", label: "Todas", href: href(f, { etiqueta: null }), active: !f.etiqueta },
+        ...tagsHere.map(({ t, n }) => ({
+          key: t.name,
+          label: (
+            <>
+              {t.name} <span className="ml-1 opacity-60">{n}</span>
+            </>
+          ),
+          href: href(f, { etiqueta: t.name }),
+          active: Boolean(f.etiqueta && norm(f.etiqueta) === norm(t.name)),
+        })),
+      ],
+    });
+
+  // Lo que está aplicado, para verlo y quitarlo con una ×
+  const applied: { key: string; label: React.ReactNode; href: string }[] = [
+    ...(f.fav ? [{ key: "fav", label: <>★ Favoritos</>, href: href(f, { fav: false }) }] : []),
+    ...(f.view === "hechos" && f.rec ? [{ key: "rec", label: f.rec === "si" ? "👍 Lo recomendaría" : "👎 No lo recomendaría", href: href(f, { rec: null }) }] : []),
+    ...(f.genero ? [{ key: "genero", label: f.genero, href: href(f, { genero: null }) }] : []),
+    ...(f.plataforma ? [{ key: "plataforma", label: f.plataforma, href: href(f, { plataforma: null }) }] : []),
+    ...(f.de
+      ? [{ key: "de", label: <>De <span className="hand text-base leading-none">{deName}</span></>, href: href(f, { de: null }) }]
+      : []),
+    ...(f.etiqueta ? [{ key: "etiqueta", label: f.etiqueta, href: href(f, { etiqueta: null }) }] : []),
+  ];
+
   return (
     <HomeSearch initialQ={f.q} kind={f.kind} filters={chips}>
-      <nav aria-label="Estado" className="mt-4 flex gap-5 border-b border-rule text-sm">
+      <nav aria-label="Estado" className="mt-4 flex items-end gap-5 border-b border-rule text-sm">
         {(
           [
             ["pendientes", "Pendientes"],
@@ -160,75 +254,25 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
             {label}
           </NavLink>
         ))}
-        <NavLink
-          href={href(f, { fav: !f.fav })}
-          aria-current={f.fav ? "page" : undefined}
-          className={`-mb-px ml-auto border-b-2 pb-2 ${f.fav ? "border-mustard font-semibold" : "border-transparent text-ink-soft"}`}
-        >
-          <span className={f.fav ? "text-mustard" : undefined}>★</span> Favoritos
-        </NavLink>
+        <FilterSheet sections={sections} activeCount={applied.length} clearHref={href(f, clear)} resultCount={entries.length} />
       </nav>
 
-      {f.view === "hechos" && (
-        <nav aria-label="Lo recomendarías" className="mt-3 flex flex-wrap gap-2">
-          {(
-            [
-              [null, "Todos"],
-              ["si", "👍 Lo recomendaría"],
-              ["no", "👎 No lo recomendaría"],
-            ] as const
-          ).map(([r, label]) => (
-            <Chip key={label} active={f.rec === r} href={href(f, { rec: r })}>
-              {label}
-            </Chip>
-          ))}
-        </nav>
-      )}
-
-      {(f.de || f.etiqueta) && (
+      {(applied.length > 0 || hasMap) && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          {f.de && (
+          {applied.map((a) => (
             <NavLink
-              href={href(f, { de: null })}
-              aria-label={`Quitar filtro: recomendado por ${deName}`}
+              key={a.key}
+              href={a.href}
+              aria-label="Quitar este filtro"
               className="inline-flex items-center gap-1.5 rounded-full border border-ink bg-ink px-3 py-1 text-[0.8125rem] text-paper"
             >
-              Recomendado por <span className="hand text-base leading-none">{deName}</span> <span aria-hidden>×</span>
+              {a.label} <span aria-hidden>×</span>
             </NavLink>
-          )}
-          {f.etiqueta && (
-            <NavLink
-              href={href(f, { etiqueta: null })}
-              aria-label={`Quitar filtro: etiqueta ${f.etiqueta}`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-ink bg-ink px-3 py-1 text-[0.8125rem] text-paper"
-            >
-              Etiqueta: {f.etiqueta} <span aria-hidden>×</span>
-            </NavLink>
-          )}
-        </div>
-      )}
-
-      {(facetUI.length > 0 || hasMap) && (
-        <div aria-label="Filtros" role="group" className="mt-3 flex flex-wrap items-center gap-2">
-          {facetUI.map((fc) => (
-            <FacetSelect
-              key={fc.key}
-              label={fc.label}
-              value={fc.value}
-              allLabel={fc.all}
-              allHref={href(f, { [fc.key]: null })}
-              options={fc.opts.map((o) => ({ ...o, href: href(f, { [fc.key]: o.value }) }))}
-            />
           ))}
-          {filtering && (
-            <Link href={href(f, { genero: null, plataforma: null, de: null, etiqueta: null })} className="text-sm text-ink-soft underline underline-offset-4">
-              Quitar filtros
-            </Link>
-          )}
           {hasMap && (
             <Link
               href={`/mapa?tipo=${f.kind}${f.view === "pendientes" ? "" : "&ver=todo"}`}
-              className="ml-auto inline-flex items-center gap-1 text-sm text-stamp underline underline-offset-4"
+              className="ml-auto text-sm text-stamp underline underline-offset-4"
             >
               Ver en mapa
             </Link>
@@ -243,41 +287,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
           ))}
         </ul>
       ) : (
-        <Empty filters={f} filtering={filtering} />
-      )}
-
-      {(tags.length > 0 || people.length > 0) && (
-        <section className="mt-10 flex flex-col gap-6 text-sm">
-          {tags.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <h2 className="text-ink-soft">Tus etiquetas</h2>
-              <ul className="flex flex-wrap gap-2">
-                {tags.map((t) => (
-                  <li key={t.name}>
-                    <Link href={href(f, { etiqueta: t.name })} scroll={false} className="rounded bg-mustard-soft px-2 py-1">
-                      {t.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {people.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <h2 className="text-ink-soft">Quién te recomienda</h2>
-              <ul className="flex flex-wrap gap-x-4 gap-y-1">
-                {people.map((p) => (
-                  <li key={p.token}>
-                    <Link href={href(f, { de: p.token })} scroll={false} className="hand text-xl">
-                      {p.name}
-                      {p.username && <span className="font-sans text-xs text-ink-soft"> @{p.username}</span>}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </section>
+        <Empty filters={f} filtering={filtering || Boolean(f.view === "hechos" && f.rec)} />
       )}
     </HomeSearch>
   );
@@ -302,7 +312,7 @@ function Empty({ filters, filtering }: { filters: Filters; filtering: boolean })
     return (
       <p className="py-12 text-ink-soft">
         Nada con esos filtros en esta pestaña.{" "}
-        <Link href={href(filters, { genero: null, plataforma: null, de: null, etiqueta: null })} className="text-ink underline underline-offset-4">
+        <Link href={href(filters, { genero: null, plataforma: null, de: null, etiqueta: null, fav: false, rec: null })} className="text-ink underline underline-offset-4">
           Quitar filtros
         </Link>
       </p>
