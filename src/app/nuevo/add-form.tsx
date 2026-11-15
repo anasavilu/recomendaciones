@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { addEntry } from "../actions";
 import { KIND_LABEL, type Candidate, type Kind } from "@/lib/catalog/types";
@@ -25,7 +26,16 @@ type SearchState = { status: "idle" | "loading" | "done" | "error"; results: Can
 
 export type AddInitial = { kind?: Kind; q?: string; picked?: Candidate; manual?: boolean };
 
-export function AddForm({
+/**
+ * Next guarda las pantallas ya visitadas con su estado. Cada vez que se llega a «Nueva recomendación»
+ * desde un enlace, el formulario empieza vacío (al volver atrás con el navegador sí se conserva).
+ */
+export function AddForm(props: Parameters<typeof AddFormInner>[0]) {
+  const { bfcacheId } = useRouter();
+  return <AddFormInner key={bfcacheId} {...props} />;
+}
+
+function AddFormInner({
   tagSuggestions,
   peopleSuggestions,
   initial = {},

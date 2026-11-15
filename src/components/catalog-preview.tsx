@@ -134,11 +134,11 @@ export function PreviewSheet({
             Cerrar
           </button>
           {entryId ? (
-            <Link href={`/e/${entryId}`} className="rounded-full border border-ink px-5 py-2.5 text-sm font-semibold">
+            <Link href={`/e/${entryId}`} onNavigate={onClose} className="rounded-full border border-ink px-5 py-2.5 text-sm font-semibold">
               Ya en tu lista: ver ficha
             </Link>
           ) : (
-            <Link href={addHref} className="rounded-full bg-stamp px-5 py-2.5 text-sm font-semibold text-stamp-ink">
+            <Link href={addHref} onNavigate={onClose} className="rounded-full bg-stamp px-5 py-2.5 text-sm font-semibold text-stamp-ink">
               Añadir a mi lista
             </Link>
           )}

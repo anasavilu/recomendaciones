@@ -53,5 +53,8 @@ export default function NewPage({ searchParams }: PageProps<"/nuevo">) {
 async function WithSuggestions({ searchParams }: { searchParams: PageProps<"/nuevo">["searchParams"] }) {
   const supabase = await createClient();
   const [s, sp] = await Promise.all([loadSuggestions(supabase), searchParams]);
-  return <AddForm tagSuggestions={s.tags} peopleSuggestions={s.people} initial={initialFrom(sp)} />;
+  const initial = initialFrom(sp);
+  // La clave hace que el formulario empiece de cero con cada resultado elegido. Sin ella,
+  // Next conserva el estado de la visita anterior a /nuevo y se quedaba la recomendación previa.
+  return <AddForm key={JSON.stringify(initial)} tagSuggestions={s.tags} peopleSuggestions={s.people} initial={initial} />;
 }
