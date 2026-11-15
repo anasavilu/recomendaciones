@@ -9,7 +9,7 @@ import { NavLink } from "@/components/nav-link";
 import { HomeHeader } from "@/components/assistant";
 import { FeedbackForm } from "./comentarios/form";
 import { FilterSheet, type FilterSection } from "@/components/filter-sheet";
-import { FACETS, facetOptions, facetValues } from "@/lib/facets";
+import { ALL_FACETS, FACETS, facetOptions, facetValues } from "@/lib/facets";
 import { personOf } from "@/lib/entry-format";
 import { norm } from "@/lib/text";
 
@@ -55,8 +55,8 @@ function href(f: Filters, change: Partial<Filters>) {
   if (change.q) p.set("q", change.q);
   if (n.kind) p.set("tipo", n.kind);
   if (n.view !== "pendientes") p.set("ver", n.view);
-  // El filtro 👍/👎 solo tiene sentido en "Realizados"
-  if (n.view === "hechos" && n.rec) p.set("rec", n.rec);
+  // El filtro 👍/👎 no tiene sentido en "Pendientes"
+  if (n.view !== "pendientes" && n.rec) p.set("rec", n.rec);
   if (n.kind && n.genero) p.set("genero", n.genero);
   if (n.kind && n.plataforma) p.set("plataforma", n.plataforma);
   if (n.de) p.set("de", n.de);
@@ -99,7 +99,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
   if (f.kind) query = query.eq("catalog_items.kind", f.kind);
   if (f.view === "pendientes") query = query.in("status", ["pendiente", "en_curso"]);
   if (f.view === "hechos") query = query.eq("status", "hecho");
-  if (f.view === "hechos" && f.rec) query = query.eq("would_recommend", f.rec === "si");
+  if (f.view !== "pendientes" && f.rec) query = query.eq("would_recommend", f.rec === "si");
   if (f.fav) query = query.eq("is_favorite", true);
 
   const [{ data, error }, { tags, people }] = await Promise.all([query, loadSuggestions(supabase)]);
@@ -107,7 +107,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
   const all = (data ?? []) as unknown as Row[];
 
   // Filtros de la categoría elegida: opciones sacadas de lo que tienes guardado
-  const facets = (f.kind && FACETS[f.kind]) || [];
+  const facets = f.kind ? (FACETS[f.kind] ?? []) : ALL_FACETS;
   const facetUI = facets
     .map((fc) => {
       const opts = facetOptions(all, fc.key);
@@ -150,7 +150,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
       options: [{ key: "fav", label: <>★ Solo favoritos</>, href: href(f, { fav: !f.fav }), active: f.fav }],
     },
   ];
-  if (f.view === "hechos")
+  if (f.view !== "pendientes")
     sections.push({
       title: "¿Lo recomendarías?",
       options: (
@@ -226,7 +226,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
   // Lo que está aplicado, para verlo y quitarlo con una ×
   const applied: { key: string; label: React.ReactNode; href: string }[] = [
     ...(f.fav ? [{ key: "fav", label: <>★ Favoritos</>, href: href(f, { fav: false }) }] : []),
-    ...(f.view === "hechos" && f.rec ? [{ key: "rec", label: f.rec === "si" ? "👍 Lo recomendaría" : "👎 No lo recomendaría", href: href(f, { rec: null }) }] : []),
+    ...(f.view !== "pendientes" && f.rec ? [{ key: "rec", label: f.rec === "si" ? "👍 Lo recomendaría" : "👎 No lo recomendaría", href: href(f, { rec: null }) }] : []),
     ...(f.genero ? [{ key: "genero", label: f.genero, href: href(f, { genero: null }) }] : []),
     ...(f.plataforma ? [{ key: "plataforma", label: f.plataforma, href: href(f, { plataforma: null }) }] : []),
     ...(f.de
@@ -287,7 +287,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
           ))}
         </ul>
       ) : (
-        <Empty filters={f} filtering={filtering || Boolean(f.view === "hechos" && f.rec)} />
+        <Empty filters={f} filtering={filtering || Boolean(f.view !== "pendientes" && f.rec)} />
       )}
     </HomeSearch>
   );

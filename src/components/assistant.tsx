@@ -6,11 +6,7 @@ import { useEffect, useRef, useState } from "react";
 type Msg = { role: "user" | "assistant"; content: string };
 
 const STORAGE_KEY = "recomendados:asistente";
-const SUGGESTIONS = [
-  "¿Qué tengo pendiente para ver este finde?",
-  "¿Quién me recomienda más cosas?",
-  "De lo que he marcado con 👍, ¿qué podría recomendar a mi madre?",
-];
+const SUGGESTIONS = ["¿Qué tengo pendiente para ver este finde?", "¿Qué peli de Netflix me podría gustar?"];
 
 function load(): Msg[] {
   try {
@@ -123,7 +119,7 @@ export function HomeHeader() {
       {open && (
         <section id="asistente" aria-label="Asistente" className="mb-5 flex flex-col gap-3 rounded-xl border border-rule bg-sheet p-3">
           {messages.length > 0 ? (
-            <div ref={scroller} className="flex max-h-80 flex-col gap-3 overflow-y-auto" aria-live="polite">
+            <div ref={scroller} className="flex max-h-[60dvh] min-h-40 flex-col gap-3 overflow-y-auto" aria-live="polite">
               {messages.map((m, i) =>
                 m.role === "user" ? (
                   <p key={i} className="max-w-[85%] self-end rounded-2xl rounded-br-sm bg-ink px-3 py-2 text-sm text-paper">
@@ -174,7 +170,7 @@ export function HomeHeader() {
             <textarea
               id="pregunta"
               ref={input}
-              rows={1}
+              rows={2}
               value={text}
               maxLength={1500}
               onChange={(e) => setText(e.target.value)}
@@ -185,7 +181,7 @@ export function HomeHeader() {
                 }
               }}
               placeholder="Escribe tu pregunta…"
-              className="max-h-32 min-h-10 flex-1 resize-none rounded-lg border border-rule bg-paper px-3 py-2 text-base"
+              className="max-h-40 min-h-16 flex-1 resize-none rounded-lg border border-rule bg-paper px-3 py-2 text-base"
             />
             <button
               disabled={busy || !text.trim()}

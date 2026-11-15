@@ -4,6 +4,12 @@ import type { EntryRow } from "./entry-format";
 /** Filtros por categoría: qué se puede filtrar en cada tipo y con qué nombre. */
 export type FacetKey = "genero" | "plataforma";
 
+/** Sin categoría elegida ("Todo"): género o tipo de cualquier cosa, y plataforma */
+export const ALL_FACETS: { key: FacetKey; label: string; all: string }[] = [
+  { key: "genero", label: "Género o tipo", all: "Todos" },
+  { key: "plataforma", label: "Plataforma", all: "Todas las plataformas" },
+];
+
 export const FACETS: Partial<Record<Kind, { key: FacetKey; label: string; all: string }[]>> = {
   pelicula: [
     { key: "genero", label: "Género", all: "Todos los géneros" },
