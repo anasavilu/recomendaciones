@@ -17,7 +17,7 @@ function load(): Msg[] {
   }
 }
 
-/** Cabecera de la lista con el botón «Pregúntame» y el recuadro de chat. */
+/** Cabecera de la lista con el botón «Te recomiendo» y el recuadro de chat. */
 export function HomeHeader() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -108,10 +108,18 @@ export function HomeHeader() {
             aria-controls="asistente"
             className={`whitespace-nowrap rounded-full border px-2.5 py-1 text-[0.8125rem] sm:px-3 sm:text-sm ${open ? "border-stamp bg-stamp text-stamp-ink" : "border-stamp text-stamp"}`}
           >
-            Pregúntame
+            Te recomiendo
           </button>
-          <Link href="/cuenta" className="whitespace-nowrap text-sm text-ink-soft underline-offset-4 hover:underline">
-            Mi cuenta
+          <Link
+            href="/cuenta"
+            aria-label="Mi cuenta"
+            title="Mi cuenta"
+            className="grid h-9 w-9 place-items-center rounded-full border border-rule text-ink-soft hover:text-ink"
+          >
+            <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />
+            </svg>
           </Link>
         </div>
       </header>
@@ -134,7 +142,7 @@ export function HomeHeader() {
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              <p className="text-sm text-ink-soft">Pregúntame lo que quieras sobre tu lista.</p>
+              <p className="text-sm text-ink-soft">Pídeme una recomendación o pregúntame lo que quieras sobre tu lista.</p>
               <ul className="flex flex-wrap gap-2">
                 {SUGGESTIONS.map((s) => (
                   <li key={s}>
