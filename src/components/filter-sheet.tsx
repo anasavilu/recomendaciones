@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { NavLink } from "./nav-link";
 
 export type FilterOption = { label: React.ReactNode; href: string; active: boolean; key: string };
-export type FilterSection = { title: string; options: FilterOption[] };
+/** `limit`: cuántas opciones se ven antes de «Ver más» (las activas se ven siempre). */
+export type FilterSection = { title: string; options: FilterOption[]; limit?: number };
 
 /**
  * Botón «Filtros» que abre un panel desde abajo. Cada opción cambia la lista al momento
@@ -70,25 +71,7 @@ export function FilterSheet({
 
             <div className="flex flex-col gap-6 overflow-y-auto px-5 py-5">
               {sections.map((s) => (
-                <section key={s.title} className="flex flex-col gap-2">
-                  <h3 className="text-sm text-ink-soft">{s.title}</h3>
-                  <ul className="flex flex-wrap gap-2">
-                    {s.options.map((o) => (
-                      <li key={o.key}>
-                        <NavLink
-                          href={o.href}
-                          replace
-                          aria-current={o.active ? "true" : undefined}
-                          className={`inline-flex items-center rounded-full border px-3 py-1.5 text-sm ${
-                            o.active ? "border-ink bg-ink text-paper" : "border-rule bg-sheet text-ink"
-                          }`}
-                        >
-                          {o.label}
-                        </NavLink>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
+                <Section key={s.title} section={s} />
               ))}
             </div>
 
@@ -112,5 +95,40 @@ export function FilterSheet({
         </div>
       )}
     </>
+  );
+}
+
+function Section({ section: s }: { section: FilterSection }) {
+  const [all, setAll] = useState(false);
+  const limit = s.limit ?? Infinity;
+  const hidden = all ? 0 : Math.max(0, s.options.length - limit);
+  const visible = hidden ? s.options.filter((o, i) => i < limit || o.active) : s.options;
+  return (
+    <section className="flex flex-col gap-2">
+      <h3 className="text-sm text-ink-soft">{s.title}</h3>
+      <ul className="flex flex-wrap gap-2">
+        {visible.map((o) => (
+          <li key={o.key}>
+            <NavLink
+              href={o.href}
+              replace
+              aria-current={o.active ? "true" : undefined}
+              className={`inline-flex items-center rounded-full border px-3 py-1.5 text-sm ${
+                o.active ? "border-ink bg-ink text-paper" : "border-rule bg-sheet text-ink"
+              }`}
+            >
+              {o.label}
+            </NavLink>
+          </li>
+        ))}
+        {hidden > 0 && (
+          <li>
+            <button type="button" onClick={() => setAll(true)} className="px-2 py-1.5 text-sm text-ink-soft underline underline-offset-4">
+              Ver {visible.length < s.options.length ? s.options.length - visible.length : hidden} más
+            </button>
+          </li>
+        )}
+      </ul>
+    </section>
   );
 }

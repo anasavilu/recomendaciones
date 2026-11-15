@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { KIND_LABEL, type Candidate, type CatalogDetails } from "@/lib/catalog/types";
 import { ratingOf } from "@/lib/entry-format";
+import { genreLabel, platformList } from "@/lib/facets";
 import { dateRange } from "@/lib/catalog/events/shared";
 import { Cover } from "./cover";
 
@@ -63,8 +64,9 @@ export function PreviewDetails({ candidate, compact = false }: { candidate: Cand
 
   const rating = ratingOf(d.extra);
   const when = d.kind === "evento" ? dateRange((d.extra?.start as string) ?? null, (d.extra?.end as string) ?? null) : null;
-  const streaming = (d.extra?.streaming_es as string[] | undefined) ?? [];
-  const facts = [d.year && d.kind !== "evento" ? String(d.year) : null, d.genres?.slice(0, 3).join(", ")].filter(Boolean).join(" · ");
+  const streaming = platformList((d.extra?.streaming_es as string[] | undefined) ?? []);
+  const genres = (d.genres ?? []).map((g) => genreLabel(g, d.kind, d.source === "google_books" || d.source === "openlibrary") ?? "").filter(Boolean);
+  const facts = [d.year && d.kind !== "evento" ? String(d.year) : null, [...new Set(genres)].slice(0, 3).join(", ")].filter(Boolean).join(" · ");
   const order = Object.keys(LINK_LABEL);
   const links = Object.entries(d.links ?? {})
     .filter(([k]) => LINK_LABEL[k])

@@ -1,6 +1,6 @@
 import "server-only";
 import { type Candidate, type CatalogDetails, type Kind, filmaffinityUrl } from "./types";
-import { genreLabel } from "../facets";
+import { genreLabel, platformList } from "../facets";
 import { fixTitle, looksFound } from "./spelling";
 
 const API = "https://api.themoviedb.org/3";
@@ -142,7 +142,7 @@ export async function tmdbDetails(sourceId: string): Promise<CatalogDetails> {
       cast: (d.credits?.cast ?? []).slice(0, 5).map((c) => c.name),
       runtime: d.runtime ?? null,
       seasons: d.number_of_seasons ?? null,
-      streaming_es: (es?.flatrate ?? []).map((p) => p.provider_name),
+      streaming_es: platformList((es?.flatrate ?? []).map((p) => p.provider_name)),
       // Nota de los usuarios de TMDB (solo si tiene votos suficientes para ser fiable)
       tmdb_rating: d.vote_count && d.vote_count >= 20 ? Math.round((d.vote_average ?? 0) * 10) / 10 : null,
       tmdb_votes: d.vote_count ?? 0,
@@ -248,7 +248,7 @@ export async function whereToWatch(titulo: string): Promise<
     results?: Record<string, { flatrate?: { provider_name: string }[]; rent?: { provider_name: string }[]; buy?: { provider_name: string }[] }>;
   }>(`/${r.media_type}/${r.id}/watch/providers`);
   const es = w.results?.ES;
-  const names = (l?: { provider_name: string }[]) => [...new Set((l ?? []).map((p) => p.provider_name))];
+  const names = (l?: { provider_name: string }[]) => platformList((l ?? []).map((p) => p.provider_name));
   return {
     titulo: (r.title ?? r.name)!,
     año: yearOf(r.release_date ?? r.first_air_date),

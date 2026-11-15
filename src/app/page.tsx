@@ -168,6 +168,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
   for (const fc of facetUI)
     sections.push({
       title: fc.label,
+      limit: 9,
       options: [
         { key: "*", label: "Todos", href: href(f, { [fc.key]: null }), active: !fc.value },
         ...fc.opts.map((o) => ({
@@ -212,6 +213,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
   if (tagsHere.length)
     sections.push({
       title: "Etiquetas",
+      limit: 9,
       options: [
         { key: "*", label: "Todas", href: href(f, { etiqueta: null }), active: !f.etiqueta },
         ...tagsHere.map(({ t, n }) => ({

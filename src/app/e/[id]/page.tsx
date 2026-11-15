@@ -12,6 +12,7 @@ import { Cover } from "@/components/cover";
 import { RecommendedBy } from "@/components/recommended-by";
 import { EditEntry } from "./edit-entry";
 import { FavoriteStar } from "@/components/favorite-star";
+import { facetValues } from "@/lib/facets";
 
 const LINK_LABEL: Record<string, string> = {
   filmaffinity: "Ver en FilmAffinity",
@@ -109,12 +110,13 @@ async function Entry({
   const eventPrice = c.kind === "evento" ? ((c.extra?.price as string | null) ?? null) : null;
   const who = e.entry_recommendations.map((r) => personOf(r.recommenders));
   const comments = e.entry_recommendations.filter((r) => r.comment);
-  const streaming = (c.extra?.streaming_es as string[] | undefined) ?? [];
+  const streaming = facetValues(e, "plataforma");
   const cast = (c.extra?.cast as string[] | undefined) ?? [];
   const hours = (c.extra?.opening_hours as string | null | undefined) ?? null;
   const hoursLines = (c.extra?.hours_lines as string[] | null | undefined) ?? null;
   const phone = (c.extra?.phone as string | null | undefined) ?? null;
-  const facts = [KIND_LABEL[c.kind], c.year, c.genres?.slice(0, 3).join(", ")].filter(Boolean).join(" · ");
+  const genres = c.kind === "restaurante" || c.kind === "lugar" || c.kind === "evento" ? (c.genres ?? []) : facetValues(e, "genero");
+  const facts = [KIND_LABEL[c.kind], c.year, genres.slice(0, 3).join(", ")].filter(Boolean).join(" · ");
 
   return (
     <article className="flex flex-col gap-8">
