@@ -8,8 +8,8 @@ import { dateRange } from "@/lib/catalog/events/shared";
 import { Cover } from "./cover";
 
 const LINK_LABEL: Record<string, string> = {
-  imdb: "IMDb",
   filmaffinity: "FilmAffinity",
+  imdb: "IMDb",
   donde_ver: "Dónde verla",
   google_books: "Google Books",
   openlibrary: "Open Library",
@@ -65,7 +65,10 @@ export function PreviewDetails({ candidate, compact = false }: { candidate: Cand
   const when = d.kind === "evento" ? dateRange((d.extra?.start as string) ?? null, (d.extra?.end as string) ?? null) : null;
   const streaming = (d.extra?.streaming_es as string[] | undefined) ?? [];
   const facts = [d.year && d.kind !== "evento" ? String(d.year) : null, d.genres?.slice(0, 3).join(", ")].filter(Boolean).join(" · ");
-  const links = Object.entries(d.links ?? {}).filter(([k]) => LINK_LABEL[k]);
+  const order = Object.keys(LINK_LABEL);
+  const links = Object.entries(d.links ?? {})
+    .filter(([k]) => LINK_LABEL[k])
+    .sort(([a], [b]) => order.indexOf(a) - order.indexOf(b));
 
   return (
     <div className="flex flex-col gap-3 text-sm">

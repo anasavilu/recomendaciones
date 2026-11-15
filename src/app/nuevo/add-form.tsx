@@ -22,7 +22,7 @@ const PLACEHOLDER: Record<Kind, string> = {
   otro: "Qué es",
 };
 
-type SearchState = { status: "idle" | "loading" | "done" | "error"; results: Candidate[]; catalog: boolean };
+type SearchState = { status: "idle" | "loading" | "done" | "error"; results: Candidate[]; catalog: boolean; corrected?: string | null };
 
 export type AddInitial = { kind?: Kind; q?: string; picked?: Candidate; manual?: boolean };
 
@@ -63,7 +63,7 @@ function AddFormInner({
       try {
         const res = await fetch(`/api/catalog/search?kind=${kind}&q=${encodeURIComponent(q.trim())}`, { signal: ctrl.signal });
         const data = await res.json();
-        setSearch({ status: res.ok ? "done" : "error", results: data.results ?? [], catalog: data.catalog ?? true, key });
+        setSearch({ status: res.ok ? "done" : "error", results: data.results ?? [], catalog: data.catalog ?? true, corrected: data.corrected ?? null, key });
       } catch (e) {
         if ((e as Error).name !== "AbortError") setSearch({ status: "error", results: [], catalog: true, key });
       }
@@ -126,6 +126,11 @@ function AddFormInner({
             {search.status === "error" && "El catálogo no responde ahora. Puedes añadirlo a mano."}
             {search.status === "done" && !search.catalog && "Para este tipo aún no hay catálogo conectado; añádelo a mano."}
             {search.status === "done" && search.catalog && search.results.length === 0 && "No aparece en el catálogo."}
+            {search.status === "done" && search.corrected && search.results.length > 0 && (
+              <>
+                Resultados de <strong className="font-semibold text-ink">«{search.corrected}»</strong>
+              </>
+            )}
           </div>
           {search.results.length > 0 && (
             <ul className="divide-y divide-rule rounded-lg border border-rule bg-sheet">

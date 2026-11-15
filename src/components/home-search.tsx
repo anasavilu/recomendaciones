@@ -134,6 +134,11 @@ export function HomeSearch({
             <h2 id="new-h" className="border-b border-rule pb-2 text-sm font-semibold">
               Añadir a tu lista
             </h2>
+            {current.data?.corrected && (
+              <p className="pt-3 text-sm text-ink-soft">
+                Resultados de <strong className="font-semibold text-ink">«{current.data.corrected}»</strong>
+              </p>
+            )}
             {current.data?.catalogFailed && (
               <p className="py-4 text-sm text-ink-soft">Los catálogos no responden ahora.</p>
             )}

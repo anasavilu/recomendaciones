@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { searchCatalog } from "@/lib/catalog";
 import { KINDS, type Kind } from "@/lib/catalog/types";
 import { placesEnabled } from "@/lib/catalog/places";
+import { searchTmdbFixed } from "@/lib/catalog/tmdb";
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -24,6 +25,10 @@ export async function GET(request: NextRequest) {
     : Boolean(process.env.TMDB_READ_TOKEN);
 
   try {
+    if (kind === "pelicula" || kind === "serie" || kind === "documental") {
+      const r = await searchTmdbFixed(q, kind);
+      return NextResponse.json({ results: r.results, catalog, corrected: r.corrected });
+    }
     const results = await searchCatalog(q, kind);
     return NextResponse.json({ results, catalog });
   } catch (e) {

@@ -14,8 +14,8 @@ import { EditEntry } from "./edit-entry";
 import { FavoriteStar } from "@/components/favorite-star";
 
 const LINK_LABEL: Record<string, string> = {
-  imdb: "Ver en IMDb",
   filmaffinity: "Ver en FilmAffinity",
+  imdb: "Ver en IMDb",
   donde_ver: "Dónde verla",
   tmdb: "Ficha en TMDB",
   google_books: "Ficha en Google Books",
@@ -24,6 +24,13 @@ const LINK_LABEL: Record<string, string> = {
   osm: "Ver en OpenStreetMap",
   web: "Web",
 };
+
+/** Enlaces en el orden de LINK_LABEL (FilmAffinity primero); los desconocidos, al final. */
+function sortLinks(links: Record<string, string>) {
+  const order = Object.keys(LINK_LABEL);
+  const pos = (k: string) => (order.includes(k) ? order.indexOf(k) : order.length);
+  return Object.entries(links).sort(([a], [b]) => pos(a) - pos(b));
+}
 
 const DAYS: Record<string, string> = { Mo: "Lu", Tu: "Ma", We: "Mi", Th: "Ju", Fr: "Vi", Sa: "Sá", Su: "Do", PH: "Festivos" };
 
@@ -227,7 +234,7 @@ async function Entry({
 
       {Object.keys(c.links ?? {}).length > 0 && (
         <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
-          {Object.entries(c.links).map(([k, url]) => (
+          {sortLinks(c.links).map(([k, url]) => (
             <li key={k}>
               <a href={url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
                 {LINK_LABEL[k] ?? k}

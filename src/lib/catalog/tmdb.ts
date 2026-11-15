@@ -1,6 +1,7 @@
 import "server-only";
 import { type Candidate, type CatalogDetails, type Kind, filmaffinityUrl } from "./types";
 import { genreLabel } from "../facets";
+import { fixTitle, looksFound } from "./spelling";
 
 const API = "https://api.themoviedb.org/3";
 const IMG = "https://image.tmdb.org/t/p/w342";
@@ -26,6 +27,8 @@ type MultiResult = {
   media_type: "movie" | "tv" | "person";
   title?: string;
   name?: string;
+  original_title?: string;
+  original_name?: string;
   release_date?: string;
   first_air_date?: string;
   poster_path?: string | null;
@@ -36,10 +39,33 @@ type MultiResult = {
 const yearOf = (d?: string) => (d && d.length >= 4 ? Number(d.slice(0, 4)) : null);
 
 export async function searchTmdb(q: string, only?: Kind): Promise<Candidate[]> {
-  if (!enabled()) return [];
+  return (await searchTmdbFixed(q, only)).results;
+}
+
+/**
+ * Busca en TMDB y, si nada se parece a lo escrito, prueba con el título corregido
+ * ("the disident" → "The Dissident"). `corrected` dice con qué título se ha buscado.
+ */
+export async function searchTmdbFixed(q: string, only?: Kind): Promise<{ results: Candidate[]; corrected: string | null }> {
+  if (!enabled()) return { results: [], corrected: null };
+  const first = await rawSearch(q, only);
+  if (looksFound(q, first.titles)) return { results: first.results, corrected: null };
+  const fixed = await fixTitle(q);
+  if (!fixed) return { results: first.results, corrected: null };
+  const second = await rawSearch(fixed, only);
+  if (!second.results.length) return { results: first.results, corrected: null };
+  const seen = new Set(second.results.map((c) => c.source_id));
+  return {
+    results: [...second.results, ...first.results.filter((c) => !seen.has(c.source_id))].slice(0, 10),
+    corrected: fixed,
+  };
+}
+
+async function rawSearch(q: string, only?: Kind): Promise<{ results: Candidate[]; titles: string[] }> {
   const data = await tmdb<{ results: MultiResult[] }>("/search/multi", { query: q, include_adult: "false" });
-  return data.results
-    .filter((r) => r.media_type === "movie" || r.media_type === "tv")
+  const rows = data.results.filter((r) => r.media_type === "movie" || r.media_type === "tv");
+  const titles = rows.flatMap((r) => [r.title ?? r.name ?? "", r.original_title ?? r.original_name ?? ""]).filter(Boolean);
+  const results = rows
     .map((r): Candidate => {
       const isDoc = r.genre_ids?.includes(DOCUMENTARY_GENRE);
       const kind: Kind = isDoc ? "documental" : r.media_type === "movie" ? "pelicula" : "serie";
@@ -55,6 +81,7 @@ export async function searchTmdb(q: string, only?: Kind): Promise<Candidate[]> {
     })
     .filter((c) => !only || c.kind === only)
     .slice(0, 10);
+  return { results, titles };
 }
 
 type Details = {
