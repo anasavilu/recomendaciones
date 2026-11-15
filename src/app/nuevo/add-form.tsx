@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { addEntry } from "../actions";
@@ -8,6 +8,13 @@ import { KIND_LABEL, type Candidate, type Kind } from "@/lib/catalog/types";
 import { TokenInput, type Token } from "@/components/token-input";
 import { Cover } from "@/components/cover";
 import { PreviewDetails } from "@/components/catalog-preview";
+import type { Draft } from "@/lib/catalog/assist";
+
+// Tipos en los que, si el catálogo no lo tiene, se puede rellenar la ficha buscando en internet
+const ASSIST: Kind[] = ["pelicula", "serie", "documental", "libro"];
+const SCREEN: Kind[] = ["pelicula", "serie", "documental"];
+
+type AssistState = { status: "idle" | "loading" | "none" | "error"; message?: string };
 
 const PICKABLE: Kind[] = ["pelicula", "serie", "documental", "libro", "restaurante", "lugar", "evento", "otro"];
 
@@ -24,7 +31,7 @@ const PLACEHOLDER: Record<Kind, string> = {
 
 type SearchState = { status: "idle" | "loading" | "done" | "error"; results: Candidate[]; catalog: boolean; corrected?: string | null };
 
-export type AddInitial = { kind?: Kind; q?: string; picked?: Candidate; manual?: boolean };
+export type AddInitial = { kind?: Kind; q?: string; picked?: Candidate; manual?: boolean; assist?: boolean };
 
 /**
  * Next guarda las pantallas ya visitadas con su estado. Cada vez que se llega a «Nueva recomendación»
@@ -49,6 +56,41 @@ function AddFormInner({
   const [raw, setSearch] = useState<SearchState & { key: string }>({ status: "idle", results: [], catalog: true, key: "" });
   const [picked, setPicked] = useState<Candidate | null>(initial.picked ?? null);
   const [manual, setManual] = useState(Boolean(initial.manual));
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [assist, setAssist] = useState<AssistState>({ status: "idle" });
+  const canAssist = ASSIST.includes(kind);
+
+  // Desde el buscador principal con «Búscalo por internet»: se busca al llegar
+  const autoAssist = useRef(Boolean(initial.assist && initial.q));
+  useEffect(() => {
+    if (!autoAssist.current) return;
+    autoAssist.current = false;
+    void lookUp(initial.q!, !initial.kind);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function lookUp(text: string, anyKind = false) {
+    const term = text.trim();
+    if (term.length < 2 || assist.status === "loading") return;
+    setManual(true);
+    setPicked(null);
+    setAssist({ status: "loading" });
+    try {
+      const res = await fetch("/api/catalog/assist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ q: term, ...(anyKind ? {} : { kind }) }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { draft?: Draft | null; error?: string };
+      if (!res.ok) return setAssist({ status: "error", message: data.error ?? "No he podido buscarlo ahora." });
+      if (!data.draft) return setAssist({ status: "none" });
+      setDraft(data.draft);
+      if (data.draft.kind !== kind) setKind(data.draft.kind);
+      setAssist({ status: "idle" });
+    } catch {
+      setAssist({ status: "error", message: "No he podido buscarlo. Revisa la conexión." });
+    }
+  }
 
   const active = !picked && !manual && kind !== "otro" && q.trim().length >= 2;
   const key = `${kind}:${q.trim()}`;
@@ -77,6 +119,8 @@ function AddFormInner({
   const reset = () => {
     setPicked(null);
     setManual(false);
+    setDraft(null);
+    setAssist({ status: "idle" });
   };
 
   const chosen = picked || manual || kind === "otro";
@@ -125,7 +169,20 @@ function AddFormInner({
             {search.status === "loading" && "Buscando…"}
             {search.status === "error" && "El catálogo no responde ahora. Puedes añadirlo a mano."}
             {search.status === "done" && !search.catalog && "Para este tipo aún no hay catálogo conectado; añádelo a mano."}
-            {search.status === "done" && search.catalog && search.results.length === 0 && "No aparece en el catálogo."}
+            {search.status === "done" && search.catalog && search.results.length === 0 && (
+              <>
+                No aparece en el catálogo.
+                {canAssist && (
+                  <>
+                    {" "}
+                    <button type="button" onClick={() => lookUp(q)} className="font-semibold text-ink underline underline-offset-4">
+                      Búscalo por internet
+                    </button>{" "}
+                    y te relleno la ficha.
+                  </>
+                )}
+              </>
+            )}
             {search.status === "done" && search.corrected && search.results.length > 0 && (
               <>
                 Resultados de <strong className="font-semibold text-ink">«{search.corrected}»</strong>
@@ -150,9 +207,16 @@ function AddFormInner({
               ))}
             </ul>
           )}
-          <button type="button" onClick={() => setManual(true)} className="self-start text-sm underline underline-offset-4">
-            Añadir a mano
-          </button>
+          <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            <button type="button" onClick={() => setManual(true)} className="underline underline-offset-4">
+              Añadir a mano
+            </button>
+            {canAssist && q.trim().length >= 2 && (
+              <button type="button" onClick={() => lookUp(q)} className="underline underline-offset-4">
+                ¿No está? Búscalo por internet
+              </button>
+            )}
+          </p>
         </div>
       )}
 
@@ -185,16 +249,80 @@ function AddFormInner({
         <div className="flex flex-col gap-4">
           <input type="hidden" name="source" value="manual" />
           <input type="hidden" name="kind" value={kind} />
-          <Field label="Título" name="title" required defaultValue={q} />
-          {kind === "restaurante" || kind === "lugar" ? (
-            <Field label="Dirección o zona" name="address" />
-          ) : kind !== "otro" ? (
-            <div className="grid grid-cols-[1fr_7rem] gap-3">
-              <Field label={kind === "libro" ? "Autor" : "Director o creador"} name="creator" />
-              <Field label="Año" name="year" inputMode="numeric" />
+
+          {canAssist && (
+            <div aria-live="polite" className="rounded-lg border border-rule px-3 py-3 text-sm">
+              {assist.status === "loading" ? (
+                <p className="text-ink-soft">Buscando en internet… tarda unos segundos.</p>
+              ) : draft ? (
+                <div className="flex flex-col gap-1">
+                  <p>He rellenado la ficha con lo que he encontrado. Revísala antes de guardar.</p>
+                  {draft.sources.length > 0 && (
+                    <p className="text-xs text-ink-soft">
+                      Fuentes:{" "}
+                      {draft.sources.map((s, i) => (
+                        <span key={s.url}>
+                          {i > 0 && ", "}
+                          <a href={s.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+                            {s.title || new URL(s.url).hostname}
+                          </a>
+                        </span>
+                      ))}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {assist.status === "none" && <p>No he encontrado nada fiable con ese nombre. Prueba a escribirlo de otra forma o rellénalo a mano.</p>}
+                  {assist.status === "error" && <p className="text-stamp">{assist.message}</p>}
+                  {assist.status === "idle" && <p className="text-ink-soft">Escribe el título y te busco el resto de datos.</p>}
+                  <button
+                    type="button"
+                    onClick={() => lookUp((document.getElementById("titulo-manual") as HTMLInputElement | null)?.value ?? q)}
+                    className="self-start rounded-full border border-stamp px-3 py-1 text-stamp"
+                  >
+                    Rellenar buscando en internet
+                  </button>
+                </div>
+              )}
             </div>
-          ) : null}
-          <Field label="Enlace (opcional)" name="link" type="url" placeholder="https://" />
+          )}
+
+          {/* La clave hace que los campos se rellenen de nuevo al llegar el borrador */}
+          <div key={draft ? `${draft.title}:${draft.year}` : "vacio"} className="flex flex-col gap-4">
+            <Field id="titulo-manual" label="Título" name="title" required defaultValue={draft?.title ?? q} />
+            {draft?.original_title && <input type="hidden" name="original_title" value={draft.original_title} />}
+            {kind === "restaurante" || kind === "lugar" ? (
+              <Field label="Dirección o zona" name="address" />
+            ) : kind !== "otro" ? (
+              <div className="grid grid-cols-[1fr_7rem] gap-3">
+                <Field
+                  label={kind === "libro" ? "Autor" : "Director o creador"}
+                  name="creator"
+                  defaultValue={draft?.creators.join(", ") ?? ""}
+                />
+                <Field label="Año" name="year" inputMode="numeric" defaultValue={draft?.year ?? ""} />
+              </div>
+            ) : null}
+            {canAssist && (
+              <>
+                <Field label="Género (opcional)" name="genres" defaultValue={draft?.genres.join(", ") ?? ""} />
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-sm text-ink-soft">Sinopsis (opcional)</span>
+                  <textarea
+                    name="summary"
+                    rows={4}
+                    defaultValue={draft?.summary ?? ""}
+                    className="rounded-lg border border-rule bg-sheet px-3 py-2.5 text-base"
+                  />
+                </label>
+              </>
+            )}
+            {SCREEN.includes(kind) && (
+              <Field label="Dónde verla (opcional)" name="platforms" placeholder="Netflix, Filmin…" defaultValue={draft?.platforms.join(", ") ?? ""} />
+            )}
+            <Field label="Enlace (opcional)" name="link" type="url" placeholder="https://" defaultValue={draft?.link ?? ""} />
+          </div>
           {kind !== "otro" && (
             <button type="button" onClick={reset} className="self-start text-sm text-ink-soft underline underline-offset-4">
               Volver a buscar en el catálogo
@@ -244,7 +372,7 @@ function Field({ label, ...props }: { label: string } & React.InputHTMLAttribute
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-sm text-ink-soft">{label}</span>
-      <input {...props} className="rounded-lg border border-rule bg-sheet px-3 py-2.5 text-base" />
+      <input {...props} className="w-full min-w-0 rounded-lg border border-rule bg-sheet px-3 py-2.5 text-base" />
     </label>
   );
 }

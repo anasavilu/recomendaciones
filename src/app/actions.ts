@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createAdminClient, requireUser } from "@/lib/supabase/server";
 import { fetchDetails } from "@/lib/catalog";
-import { KINDS, type CatalogDetails, type Kind } from "@/lib/catalog/types";
+import { KINDS, filmaffinityUrl, type CatalogDetails, type Kind } from "@/lib/catalog/types";
 import {
   addEntryRecommenders,
   addEntryTags,
@@ -80,16 +80,25 @@ export async function addEntry(formData: FormData) {
     if (!title) throw new Error("Falta el título");
     const yearRaw = Number(formData.get("year"));
     const link = String(formData.get("link") ?? "").trim();
-    const author = String(formData.get("creator") ?? "").trim();
+    const original = String(formData.get("original_title") ?? "").trim().slice(0, 300);
+    const summary = String(formData.get("summary") ?? "").trim().slice(0, 2000);
+    const platforms = splitList(String(formData.get("platforms") ?? "")).slice(0, 8);
     details = {
       kind,
       source: "manual",
       source_id: null,
-      title,
+      title: title.slice(0, 300),
+      original_title: original && original !== title ? original : null,
       year: Number.isInteger(yearRaw) && yearRaw > 1000 ? yearRaw : null,
-      creators: author ? [author] : [],
+      creators: splitList(String(formData.get("creator") ?? "")).slice(0, 6),
+      genres: splitList(String(formData.get("genres") ?? "")).slice(0, 6),
+      summary: summary || null,
       address: String(formData.get("address") ?? "").trim() || null,
-      links: /^https?:\/\//.test(link) ? { web: link } : {},
+      links: {
+        ...(/^https?:\/\//.test(link) ? { web: link } : {}),
+        ...(["pelicula", "serie", "documental"].includes(kind) ? { filmaffinity: filmaffinityUrl(title) } : {}),
+      },
+      extra: platforms.length ? { streaming_es: platforms } : {},
     };
   } else {
     details = { kind: "otro", source, source_id: String(formData.get("source_id") ?? ""), title: "" };

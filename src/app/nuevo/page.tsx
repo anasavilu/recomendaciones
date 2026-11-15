@@ -31,7 +31,7 @@ function initialFrom(sp: Record<string, string | string[] | undefined>): AddInit
     };
   }
   const q = one("q").slice(0, 200);
-  return { kind, q, manual: Boolean(q) };
+  return { kind, q, manual: Boolean(q), assist: Boolean(q) && one("ayuda") === "1" };
 }
 
 export default function NewPage({ searchParams }: PageProps<"/nuevo">) {

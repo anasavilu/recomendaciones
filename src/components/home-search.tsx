@@ -206,6 +206,14 @@ export function HomeSearch({
                 <Link href={manualHref} className="text-ink underline underline-offset-4">
                   Añadir «{term}» a mano
                 </Link>
+                {(!kind || ["pelicula", "serie", "documental", "libro"].includes(kind)) && (
+                  <>
+                    {" o "}
+                    <Link href={`${manualHref}&ayuda=1`} className="text-ink underline underline-offset-4">
+                      búscalo por internet
+                    </Link>
+                  </>
+                )}
               </p>
             )}
           </section>
