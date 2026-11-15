@@ -82,11 +82,30 @@ export function eventTiming(extra: Record<string, unknown> | null | undefined) {
 }
 
 /** "7,2 ★ · 12.345 votos en TMDB" (o null si no hay nota fiable). */
+const dec = (n: number) => n.toLocaleString("es-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+/** Nota de TMDB (sobre 10): "6,9/10" o "6,9/10 · 5012 votos en TMDB". */
 export function tmdbRating(extra: Record<string, unknown> | null | undefined, short = false): string | null {
   const r = extra?.tmdb_rating;
   if (typeof r !== "number") return null;
-  const stars = `${r.toLocaleString("es-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ★`;
-  if (short) return stars;
-  const n = typeof extra?.tmdb_votes === "number" ? (extra.tmdb_votes as number) : null;
-  return n ? `${stars} · ${n.toLocaleString("es-ES")} votos en TMDB` : `${stars} en TMDB`;
+  const score = `${dec(r)}/10`;
+  if (short) return score;
+  const n = typeof extra?.tmdb_votes === "number" ? extra.tmdb_votes : null;
+  return n ? `${score} · ${n.toLocaleString("es-ES")} votos en TMDB` : `${score} en TMDB`;
+}
+
+/** Nota de lectores (sobre 5): "4,1/5" o "4,1/5 · 230 valoraciones en Open Library". */
+export function bookRating(extra: Record<string, unknown> | null | undefined, short = false): string | null {
+  const r = extra?.book_rating;
+  if (typeof r !== "number") return null;
+  const score = `${dec(r)}/5`;
+  if (short) return score;
+  const n = typeof extra?.book_votes === "number" ? extra.book_votes : null;
+  const src = typeof extra?.book_rating_source === "string" ? extra.book_rating_source : "lectores";
+  return n ? `${score} · ${n.toLocaleString("es-ES")} valoraciones en ${src}` : `${score} en ${src}`;
+}
+
+/** La nota que tenga: TMDB (pelis y series), lectores (libros) o Google (sitios). */
+export function ratingOf(extra: Record<string, unknown> | null | undefined, short = false): string | null {
+  return tmdbRating(extra, short) ?? bookRating(extra, short) ?? googleRating(extra, short);
 }

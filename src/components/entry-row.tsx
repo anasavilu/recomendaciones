@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { markDone, removeEntry } from "@/app/actions";
 import { KIND_LABEL } from "@/lib/catalog/types";
-import { doneLabel, eventTiming, googleRating, personOf, type EntryRow as Row } from "@/lib/entry-format";
+import { doneLabel, eventTiming, personOf, ratingOf, type EntryRow as Row } from "@/lib/entry-format";
 import { shortDate } from "@/lib/catalog/events/shared";
 import { Cover } from "./cover";
 import { RecommendedBy } from "./recommended-by";
@@ -24,7 +24,7 @@ export function EntryRow({ entry }: { entry: Row }) {
   const venue = c.kind === "evento" ? ((c.extra?.venue as string | null) ?? null) : null;
   const meta = [
     KIND_LABEL[c.kind],
-    googleRating(c.extra, true),
+    ratingOf(c.extra, true),
     c.kind === "evento" ? null : c.year,
     timing?.end ? `hasta ${shortDate(timing.end)}` : timing?.start ? shortDate(timing.start) : null,
     venue ?? c.creators?.[0] ?? c.address,

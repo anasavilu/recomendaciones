@@ -17,6 +17,8 @@ type Volume = {
     imageLinks?: { thumbnail?: string; smallThumbnail?: string };
     infoLink?: string;
     pageCount?: number;
+    averageRating?: number;
+    ratingsCount?: number;
     industryIdentifiers?: { type: string; identifier: string }[];
     language?: string;
   };
@@ -121,6 +123,13 @@ export async function bookDetails(id: string): Promise<CatalogDetails> {
         .filter((g): g is string => Boolean(g)),
     ),
   ];
+  const isbn = i.industryIdentifiers?.find((x) => x.type === "ISBN_13")?.identifier ?? null;
+  const rating =
+    i.averageRating && (i.ratingsCount ?? 0) >= MIN_VOTES
+      ? { book_rating: i.averageRating, book_votes: i.ratingsCount, book_rating_source: "Google Books" }
+      : isbn
+        ? await openLibraryRatingByIsbn(isbn)
+        : {};
   return {
     kind: "libro",
     source: "google_books",
@@ -134,8 +143,10 @@ export async function bookDetails(id: string): Promise<CatalogDetails> {
     links: i.infoLink ? { google_books: i.infoLink } : {},
     extra: {
       pages: i.pageCount ?? null,
-      isbn: i.industryIdentifiers?.find((x) => x.type === "ISBN_13")?.identifier ?? null,
+      isbn,
       language: i.language ?? null,
+      ...rating,
+      book_rated_at: new Date().toISOString(),
     },
   };
 }
@@ -194,5 +205,35 @@ export async function openLibraryDetails(key: string): Promise<CatalogDetails> {
     summary: typeof w.description === "string" ? w.description : (w.description?.value ?? null),
     image_url: w.covers?.[0] ? `https://covers.openlibrary.org/b/id/${w.covers[0]}-L.jpg` : null,
     links: { openlibrary: `https://openlibrary.org${key}` },
+    extra: { ...(await openLibraryRating(key)), book_rated_at: new Date().toISOString() },
   };
+}
+
+// Nota de lectores: con menos valoraciones no es fiable
+const MIN_VOTES = 5;
+const OL_HEADERS = { "User-Agent": "Recomendados/0.1" };
+
+/** Nota media de los lectores de Open Library (sobre 5), si hay suficientes valoraciones. */
+async function openLibraryRating(workKey: string): Promise<Record<string, unknown>> {
+  try {
+    const r = await fetch(`https://openlibrary.org${workKey}/ratings.json`, { headers: OL_HEADERS, signal: AbortSignal.timeout(4000) });
+    if (!r.ok) return {};
+    const d = (await r.json()) as { summary?: { average?: number | null; count?: number } };
+    const avg = d.summary?.average;
+    const count = d.summary?.count ?? 0;
+    return avg && count >= MIN_VOTES ? { book_rating: avg, book_votes: count, book_rating_source: "Open Library" } : {};
+  } catch {
+    return {};
+  }
+}
+
+async function openLibraryRatingByIsbn(isbn: string): Promise<Record<string, unknown>> {
+  try {
+    const r = await fetch(`https://openlibrary.org/isbn/${encodeURIComponent(isbn)}.json`, { headers: OL_HEADERS, signal: AbortSignal.timeout(4000) });
+    if (!r.ok) return {};
+    const work = ((await r.json()) as { works?: { key: string }[] }).works?.[0]?.key;
+    return work && /^\/works\/OL\w+$/.test(work) ? openLibraryRating(work) : {};
+  } catch {
+    return {};
+  }
 }

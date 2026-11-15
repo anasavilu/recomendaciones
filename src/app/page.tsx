@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { after } from "next/server";
+import { refreshRatings } from "@/lib/catalog/refresh";
 import { createClient } from "@/lib/supabase/server";
 import { KINDS, KIND_PLURAL, type Kind } from "@/lib/catalog/types";
 import { ENTRY_SELECT, loadSuggestions, type EntryRow as Row } from "@/lib/entries";
@@ -105,6 +107,8 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
   const [{ data, error }, { tags, people }] = await Promise.all([query, loadSuggestions(supabase)]);
   if (error) throw error;
   const all = (data ?? []) as unknown as Row[];
+  // Pelis, series y libros guardados antes de traer la nota: se ponen al día sin hacer esperar
+  after(() => refreshRatings(all.map((e) => e.catalog_items)));
 
   // Filtros de la categoría elegida: opciones sacadas de lo que tienes guardado
   const facets = f.kind ? (FACETS[f.kind] ?? []) : ALL_FACETS;

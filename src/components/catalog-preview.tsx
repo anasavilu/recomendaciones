@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { KIND_LABEL, type Candidate, type CatalogDetails } from "@/lib/catalog/types";
-import { googleRating, tmdbRating } from "@/lib/entry-format";
+import { ratingOf } from "@/lib/entry-format";
 import { dateRange } from "@/lib/catalog/events/shared";
 import { Cover } from "./cover";
 
@@ -61,7 +61,7 @@ export function PreviewDetails({ candidate, compact = false }: { candidate: Cand
   if (!current) return <p className="text-sm text-ink-soft">Cargando la ficha…</p>;
   if (!d) return <p className="text-sm text-ink-soft">No se ha podido cargar la ficha, pero puedes añadirlo igualmente.</p>;
 
-  const rating = tmdbRating(d.extra) ?? googleRating(d.extra);
+  const rating = ratingOf(d.extra);
   const when = d.kind === "evento" ? dateRange((d.extra?.start as string) ?? null, (d.extra?.end as string) ?? null) : null;
   const streaming = (d.extra?.streaming_es as string[] | undefined) ?? [];
   const facts = [d.year && d.kind !== "evento" ? String(d.year) : null, d.genres?.slice(0, 3).join(", ")].filter(Boolean).join(" · ");
