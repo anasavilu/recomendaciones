@@ -80,3 +80,13 @@ export function eventTiming(extra: Record<string, unknown> | null | undefined) {
   const state = days < 0 ? "ended" : days <= 7 ? "soon" : "on";
   return { start, end, days, state } as const;
 }
+
+/** "7,2 ★ · 12.345 votos en TMDB" (o null si no hay nota fiable). */
+export function tmdbRating(extra: Record<string, unknown> | null | undefined, short = false): string | null {
+  const r = extra?.tmdb_rating;
+  if (typeof r !== "number") return null;
+  const stars = `${r.toLocaleString("es-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ★`;
+  if (short) return stars;
+  const n = typeof extra?.tmdb_votes === "number" ? (extra.tmdb_votes as number) : null;
+  return n ? `${stars} · ${n.toLocaleString("es-ES")} votos en TMDB` : `${stars} en TMDB`;
+}

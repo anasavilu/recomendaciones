@@ -73,12 +73,16 @@ type Details = {
   created_by?: { name: string }[];
   credits?: { crew: { job: string; name: string }[]; cast: { name: string }[] };
   "watch/providers"?: { results?: Record<string, { flatrate?: { provider_name: string }[]; link?: string }> };
+  vote_average?: number;
+  vote_count?: number;
+  imdb_id?: string | null;
+  external_ids?: { imdb_id?: string | null };
 };
 
 export async function tmdbDetails(sourceId: string): Promise<CatalogDetails> {
   const [media, id] = sourceId.split(":");
   if (media !== "movie" && media !== "tv") throw new Error("Id de TMDB no válido");
-  const d = await tmdb<Details>(`/${media}/${id}`, { append_to_response: "credits,watch/providers" });
+  const d = await tmdb<Details>(`/${media}/${id}`, { append_to_response: "credits,watch/providers,external_ids" });
 
   const isDoc = d.genres.some((g) => g.id === DOCUMENTARY_GENRE);
   const kind: Kind = isDoc ? "documental" : media === "movie" ? "pelicula" : "serie";
@@ -88,6 +92,7 @@ export async function tmdbDetails(sourceId: string): Promise<CatalogDetails> {
       ? (d.credits?.crew ?? []).filter((c) => c.job === "Director").map((c) => c.name)
       : (d.created_by ?? []).map((c) => c.name);
   const es = d["watch/providers"]?.results?.ES;
+  const imdb = d.imdb_id ?? d.external_ids?.imdb_id ?? null;
 
   return {
     kind,
@@ -104,12 +109,16 @@ export async function tmdbDetails(sourceId: string): Promise<CatalogDetails> {
       tmdb: `https://www.themoviedb.org/${media}/${d.id}`,
       ...(media === "movie" || media === "tv" ? { filmaffinity: filmaffinityUrl(title) } : {}),
       ...(es?.link ? { donde_ver: es.link } : {}),
+      ...(imdb && /^tt\d+$/.test(imdb) ? { imdb: `https://www.imdb.com/title/${imdb}/` } : {}),
     },
     extra: {
       cast: (d.credits?.cast ?? []).slice(0, 5).map((c) => c.name),
       runtime: d.runtime ?? null,
       seasons: d.number_of_seasons ?? null,
       streaming_es: (es?.flatrate ?? []).map((p) => p.provider_name),
+      // Nota de los usuarios de TMDB (solo si tiene votos suficientes para ser fiable)
+      tmdb_rating: d.vote_count && d.vote_count >= 20 ? Math.round((d.vote_average ?? 0) * 10) / 10 : null,
+      tmdb_votes: d.vote_count ?? 0,
     },
   };
 }

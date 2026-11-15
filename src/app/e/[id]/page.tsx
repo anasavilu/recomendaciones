@@ -3,16 +3,18 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { KIND_LABEL } from "@/lib/catalog/types";
-import { ENTRY_SELECT, eventTiming, googleRating, loadSuggestions, personOf, type EntryRow } from "@/lib/entries";
+import { ENTRY_SELECT, eventTiming, googleRating, tmdbRating, loadSuggestions, personOf, type EntryRow } from "@/lib/entries";
 import { dateRange } from "@/lib/catalog/events/shared";
 import { createAdminClient } from "@/lib/supabase/server";
 import { placeDetails, placesEnabled } from "@/lib/catalog/places";
+import { fetchDetails } from "@/lib/catalog";
 import { Cover } from "@/components/cover";
 import { RecommendedBy } from "@/components/recommended-by";
 import { EditEntry } from "./edit-entry";
 import { FavoriteStar } from "@/components/favorite-star";
 
 const LINK_LABEL: Record<string, string> = {
+  imdb: "Ver en IMDb",
   filmaffinity: "Ver en FilmAffinity",
   donde_ver: "Dónde verla",
   tmdb: "Ficha en TMDB",
@@ -87,8 +89,23 @@ async function Entry({
       console.warn("[lugares] No se pudo actualizar la ficha:", (err as Error).message);
     }
   }
+  // Pelis y series guardadas antes de traer la nota de TMDB y el enlace a IMDb: lo mismo, una vez
+  if (ci.source === "tmdb" && ci.source_id && !("tmdb_votes" in (ci.extra ?? {}))) {
+    try {
+      const fresh = await fetchDetails("tmdb", ci.source_id);
+      const { data: updated } = await createAdminClient()
+        .from("catalog_items")
+        .update({ extra: { ...(ci.extra ?? {}), ...fresh.extra }, links: { ...(ci.links ?? {}), ...fresh.links } })
+        .eq("id", ci.id)
+        .select("*")
+        .single();
+      if (updated) e.catalog_items = updated as EntryRow["catalog_items"];
+    } catch (err) {
+      console.warn("[tmdb] No se pudo actualizar la ficha:", (err as Error).message);
+    }
+  }
   const c = e.catalog_items;
-  const rating = googleRating(c.extra);
+  const rating = tmdbRating(c.extra) ?? googleRating(c.extra);
   const timing = c.kind === "evento" ? eventTiming(c.extra) : null;
   const eventWhen = timing ? dateRange(timing.start, timing.end) : null;
   const eventTime = c.kind === "evento" ? ((c.extra?.time as string | null) ?? null) : null;

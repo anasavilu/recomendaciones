@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { SearchResponse } from "@/app/api/search/route";
-import { KIND_LABEL, type Kind } from "@/lib/catalog/types";
+import { KIND_LABEL, type Candidate, type Kind } from "@/lib/catalog/types";
 import { Cover } from "./cover";
+import { PreviewSheet } from "./catalog-preview";
 import { EntryRow } from "./entry-row";
 
 type State = { key: string; status: "loading" | "done" | "error"; data: SearchResponse | null };
@@ -37,6 +38,7 @@ export function HomeSearch({
   const searching = term.length >= 2;
   const key = `${kind ?? ""}|${term}`;
   const [state, setState] = useState<State>({ key: "", status: "done", data: null });
+  const [preview, setPreview] = useState<{ c: Candidate; href: string } | null>(null);
 
   // Mantener ?q= en la URL para que al volver atrás siga la búsqueda
   useEffect(() => {
@@ -153,23 +155,41 @@ export function HomeSearch({
                         ...(c.subtitle ? { sub: c.subtitle } : {}),
                         ...(c.image_url ? { img: c.image_url } : {}),
                       })}`;
-                  return (
-                    <li key={`${c.source}:${c.source_id}`}>
-                      <Link href={href} className="flex items-center gap-4 py-3">
-                        <Cover src={c.image_url ?? null} kind={c.kind} title={c.title} size="sm" />
-                        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                          <span className="font-semibold leading-snug">
-                            {c.title}
-                            {c.year ? <span className="font-normal text-ink-soft"> ({c.year})</span> : null}
-                          </span>
-                          <span className="truncate text-sm text-ink-soft">{meta}</span>
-                        </div>
-                        <span
-                          className={`shrink-0 text-sm ${c.entryId ? "text-ink-soft" : "rounded-full border border-stamp px-3 py-1 text-stamp"}`}
-                        >
-                          {c.entryId ? "Ya en tu lista" : "Añadir"}
+                  const body = (
+                    <>
+                      <Cover src={c.image_url ?? null} kind={c.kind} title={c.title} size="sm" />
+                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <span className="font-semibold leading-snug">
+                          {c.title}
+                          {c.year ? <span className="font-normal text-ink-soft"> ({c.year})</span> : null}
                         </span>
-                      </Link>
+                        <span className="truncate text-sm text-ink-soft">{meta}</span>
+                        {!c.entryId && <span className="text-xs text-ink-soft underline underline-offset-2">Ver ficha</span>}
+                      </div>
+                    </>
+                  );
+                  return (
+                    <li key={`${c.source}:${c.source_id}`} className="flex items-center gap-3">
+                      {c.entryId ? (
+                        <Link href={href} className="flex min-w-0 flex-1 items-center gap-4 py-3">
+                          {body}
+                          <span className="shrink-0 text-sm text-ink-soft">Ya en tu lista</span>
+                        </Link>
+                      ) : (
+                        <>
+                          {/* Tocar el resultado abre la ficha para comprobar que es ese; «Añadir» va directo */}
+                          <button
+                            type="button"
+                            onClick={() => setPreview({ c, href })}
+                            className="flex min-w-0 flex-1 items-center gap-4 py-3 text-left"
+                          >
+                            {body}
+                          </button>
+                          <Link href={href} className="shrink-0 rounded-full border border-stamp px-3 py-1 text-sm text-stamp">
+                            Añadir
+                          </Link>
+                        </>
+                      )}
                     </li>
                   );
                 })}
@@ -185,6 +205,10 @@ export function HomeSearch({
             )}
           </section>
         </div>
+      )}
+
+      {preview && (
+        <PreviewSheet candidate={preview.c} addHref={preview.href} entryId={null} onClose={() => setPreview(null)} />
       )}
     </>
   );

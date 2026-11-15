@@ -6,6 +6,7 @@ import { addEntry } from "../actions";
 import { KIND_LABEL, type Candidate, type Kind } from "@/lib/catalog/types";
 import { TokenInput, type Token } from "@/components/token-input";
 import { Cover } from "@/components/cover";
+import { PreviewDetails } from "@/components/catalog-preview";
 
 const PICKABLE: Kind[] = ["pelicula", "serie", "documental", "libro", "restaurante", "lugar", "evento", "otro"];
 
@@ -157,6 +158,11 @@ export function AddForm({
           <button type="button" onClick={reset} className="text-sm text-ink-soft underline underline-offset-4">
             Cambiar
           </button>
+        </div>
+      )}
+      {picked && picked.source !== "google_places" && (
+        <div className="-mt-2 rounded-lg border border-rule px-3 py-3">
+          <PreviewDetails candidate={picked} compact />
         </div>
       )}
 
