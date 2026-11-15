@@ -78,8 +78,7 @@ export async function requestPasswordReset(_prev: AuthState, fd: FormData): Prom
   const email = String(fd.get("email") ?? "").trim().toLowerCase();
   if (!EMAIL_RE.test(email)) return { error: "Escribe el correo de tu cuenta.", values: { email } };
   const supabase = await createClient();
-  const next = encodeURIComponent("/cuenta?restablecer=1");
-  await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${await siteOrigin()}/auth/callback?next=${next}` });
+  await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${await siteOrigin()}/auth/restablecer` });
   // Mismo mensaje exista o no la cuenta
   return { info: `Si ${email} tiene cuenta, te llegará un enlace para elegir una contraseña nueva.` };
 }
