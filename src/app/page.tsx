@@ -5,10 +5,13 @@ import { KINDS, KIND_PLURAL, type Kind } from "@/lib/catalog/types";
 import { ENTRY_SELECT, loadSuggestions, type EntryRow as Row } from "@/lib/entries";
 import { EntryRow } from "@/components/entry-row";
 import { HomeSearch } from "@/components/home-search";
+import { NavLink } from "@/components/nav-link";
 import { HomeHeader } from "@/components/assistant";
 import { FeedbackForm } from "./comentarios/form";
 import { FacetSelect } from "@/components/facet-select";
 import { FACETS, facetOptions, facetValues } from "@/lib/facets";
+import { personOf } from "@/lib/entry-format";
+import { norm } from "@/lib/text";
 
 type View = "pendientes" | "hechos" | "todo";
 type Rec = "si" | "no" | null;
@@ -18,6 +21,9 @@ type Filters = {
   view: View;
   rec: Rec;
   genero: string | null;
+  de: string | null; // quién lo recomendó: "@ana" o un nombre
+  etiqueta: string | null;
+  fav: boolean;
   plataforma: string | null;
 };
 
@@ -32,6 +38,9 @@ function parse(sp: Record<string, string | string[] | undefined>): Filters {
     rec: one(sp.rec) === "si" ? "si" : one(sp.rec) === "no" ? "no" : null,
     genero: one(sp.genero).trim().slice(0, 80) || null,
     plataforma: one(sp.plataforma).trim().slice(0, 80) || null,
+    de: one(sp.de).trim().slice(0, 80) || null,
+    etiqueta: one(sp.etiqueta).trim().slice(0, 80) || null,
+    fav: one(sp.fav) === "1",
   };
 }
 
@@ -46,10 +55,13 @@ function href(f: Filters, change: Partial<Filters>) {
   if (change.q) p.set("q", change.q);
   if (n.kind) p.set("tipo", n.kind);
   if (n.view !== "pendientes") p.set("ver", n.view);
-  // El filtro 👍/👎 solo tiene sentido en "Ya hechos"
+  // El filtro 👍/👎 solo tiene sentido en "Realizados"
   if (n.view === "hechos" && n.rec) p.set("rec", n.rec);
   if (n.kind && n.genero) p.set("genero", n.genero);
   if (n.kind && n.plataforma) p.set("plataforma", n.plataforma);
+  if (n.de) p.set("de", n.de);
+  if (n.etiqueta) p.set("etiqueta", n.etiqueta);
+  if (n.fav) p.set("fav", "1");
   const s = p.toString();
   return s ? `/?${s}` : "/";
 }
@@ -88,6 +100,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
   if (f.view === "pendientes") query = query.in("status", ["pendiente", "en_curso"]);
   if (f.view === "hechos") query = query.eq("status", "hecho");
   if (f.view === "hechos" && f.rec) query = query.eq("would_recommend", f.rec === "si");
+  if (f.fav) query = query.eq("is_favorite", true);
 
   const [{ data, error }, { tags, people }] = await Promise.all([query, loadSuggestions(supabase)]);
   if (error) throw error;
@@ -106,9 +119,12 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
   const entries = all.filter(
     (e) =>
       (!f.genero || facetValues(e, "genero").includes(f.genero)) &&
-      (!f.plataforma || facetValues(e, "plataforma").includes(f.plataforma)),
+      (!f.plataforma || facetValues(e, "plataforma").includes(f.plataforma)) &&
+      (!f.de || e.entry_recommendations.some((r) => personOf(r.recommenders).token === f.de)) &&
+      (!f.etiqueta || e.entry_tags.some((t) => norm(t.tags.name) === norm(f.etiqueta!))),
   );
-  const filtering = Boolean(f.genero || f.plataforma);
+  const filtering = Boolean(f.genero || f.plataforma || f.de || f.etiqueta);
+  const deName = f.de ? (people.find((p) => p.token === f.de)?.name ?? f.de.replace(/^@/, "")) : null;
 
   const chips = (
       <nav aria-label="Tipo" className="flex flex-wrap gap-1.5">
@@ -120,6 +136,12 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
             {KIND_PLURAL[k]}
           </Chip>
         ))}
+              <NavLink
+          href={f.kind && ["restaurante", "lugar", "evento"].includes(f.kind) ? `/mapa?tipo=${f.kind}` : "/mapa"}
+          className="shrink-0 rounded-full border border-stamp px-3 py-1 text-[0.8125rem] leading-5 text-stamp"
+        >
+          Mapa
+        </NavLink>
       </nav>
   );
 
@@ -129,19 +151,26 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
         {(
           [
             ["pendientes", "Pendientes"],
-            ["hechos", "Ya hechos"],
+            ["hechos", "Realizados"],
             ["todo", "Todo"],
           ] as const
         ).map(([v, label]) => (
-          <Link
+          <NavLink
             key={v}
             href={href(f, { view: v })}
             aria-current={f.view === v ? "page" : undefined}
             className={`-mb-px border-b-2 pb-2 ${f.view === v ? "border-stamp font-semibold" : "border-transparent text-ink-soft"}`}
           >
             {label}
-          </Link>
+          </NavLink>
         ))}
+        <NavLink
+          href={href(f, { fav: !f.fav })}
+          aria-current={f.fav ? "page" : undefined}
+          className={`-mb-px ml-auto border-b-2 pb-2 ${f.fav ? "border-mustard font-semibold" : "border-transparent text-ink-soft"}`}
+        >
+          <span className={f.fav ? "text-mustard" : undefined}>★</span> Favoritos
+        </NavLink>
       </nav>
 
       {f.view === "hechos" && (
@@ -160,6 +189,29 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
         </nav>
       )}
 
+      {(f.de || f.etiqueta) && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {f.de && (
+            <NavLink
+              href={href(f, { de: null })}
+              aria-label={`Quitar filtro: recomendado por ${deName}`}
+              className="inline-flex items-center gap-1.5 rounded-full border border-ink bg-ink px-3 py-1 text-[0.8125rem] text-paper"
+            >
+              Recomendado por <span className="hand text-base leading-none">{deName}</span> <span aria-hidden>×</span>
+            </NavLink>
+          )}
+          {f.etiqueta && (
+            <NavLink
+              href={href(f, { etiqueta: null })}
+              aria-label={`Quitar filtro: etiqueta ${f.etiqueta}`}
+              className="inline-flex items-center gap-1.5 rounded-full border border-ink bg-ink px-3 py-1 text-[0.8125rem] text-paper"
+            >
+              Etiqueta: {f.etiqueta} <span aria-hidden>×</span>
+            </NavLink>
+          )}
+        </div>
+      )}
+
       {facetUI.length > 0 && (
         <div aria-label="Filtros" role="group" className="mt-3 flex flex-wrap items-center gap-2">
           {facetUI.map((fc) => (
@@ -173,7 +225,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
             />
           ))}
           {filtering && (
-            <Link href={href(f, { genero: null, plataforma: null })} className="text-sm text-ink-soft underline underline-offset-4">
+            <Link href={href(f, { genero: null, plataforma: null, de: null, etiqueta: null })} className="text-sm text-ink-soft underline underline-offset-4">
               Quitar filtros
             </Link>
           )}
@@ -198,7 +250,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
               <ul className="flex flex-wrap gap-2">
                 {tags.map((t) => (
                   <li key={t.name}>
-                    <Link href={href(f, { q: t.name })} className="rounded bg-mustard-soft px-2 py-1">
+                    <Link href={href(f, { etiqueta: t.name })} scroll={false} className="rounded bg-mustard-soft px-2 py-1">
                       {t.name}
                     </Link>
                   </li>
@@ -212,7 +264,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
               <ul className="flex flex-wrap gap-x-4 gap-y-1">
                 {people.map((p) => (
                   <li key={p.token}>
-                    <Link href={href(f, { q: p.token })} className="hand text-xl">
+                    <Link href={href(f, { de: p.token })} scroll={false} className="hand text-xl">
                       {p.name}
                       {p.username && <span className="font-sans text-xs text-ink-soft"> @{p.username}</span>}
                     </Link>
@@ -229,7 +281,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
 
 function Chip({ active, href, children }: { active: boolean; href: string; children: React.ReactNode }) {
   return (
-    <Link
+    <NavLink
       href={href}
       aria-current={active ? "page" : undefined}
       className={`shrink-0 rounded-full border px-3 py-1 text-[0.8125rem] leading-5 ${
@@ -237,7 +289,7 @@ function Chip({ active, href, children }: { active: boolean; href: string; child
       }`}
     >
       {children}
-    </Link>
+    </NavLink>
   );
 }
 
@@ -246,9 +298,15 @@ function Empty({ filters, filtering }: { filters: Filters; filtering: boolean })
     return (
       <p className="py-12 text-ink-soft">
         Nada con esos filtros en esta pestaña.{" "}
-        <Link href={href(filters, { genero: null, plataforma: null })} className="text-ink underline underline-offset-4">
+        <Link href={href(filters, { genero: null, plataforma: null, de: null, etiqueta: null })} className="text-ink underline underline-offset-4">
           Quitar filtros
         </Link>
+      </p>
+    );
+  if (filters.fav)
+    return (
+      <p className="py-12 text-ink-soft">
+        Aún no tienes favoritos aquí. Pulsa la ☆ de cualquier recomendación para marcarla.
       </p>
     );
   if (filters.view === "hechos" && filters.rec)

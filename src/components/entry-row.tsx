@@ -10,6 +10,7 @@ import { shortDate } from "@/lib/catalog/events/shared";
 import { Cover } from "./cover";
 import { RecommendedBy } from "./recommended-by";
 import { WouldRecommend } from "./would-recommend";
+import { FavoriteStar } from "./favorite-star";
 
 const UNDO_MS = 4000;
 const DELETE_UNDO_MS = 5000;
@@ -253,6 +254,7 @@ export function EntryRow({ entry }: { entry: Row }) {
               )}
             </div>
           </Link>
+          <FavoriteStar entryId={entry.id} initial={entry.is_favorite} title={c.title} />
           <button
             type="button"
             onClick={() => toggle(!done)}

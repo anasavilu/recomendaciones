@@ -26,15 +26,15 @@ export function ProfileForm({ name, username }: { name: string; username: string
   return (
     <form action={action} className="flex flex-col gap-4">
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm text-ink-soft">Tu nombre</span>
-        <input name="name" required defaultValue={name} className={input} />
-      </label>
-      <label className="flex flex-col gap-1.5">
         <span className="text-sm text-ink-soft">Usuario</span>
         <input name="username" required defaultValue={username} autoCapitalize="none" placeholder="ana" className={input} />
         <span className="text-xs text-ink-soft">
           Compártelo para que, cuando alguien apunte algo que le recomendaste, ponga que viene de ti.
         </span>
+      </label>
+      <label className="flex flex-col gap-1.5">
+        <span className="text-sm text-ink-soft">Tu nombre</span>
+        <input name="name" required defaultValue={name} className={input} />
       </label>
       <Result state={state} />
       <button disabled={pending} className="self-start rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-paper disabled:opacity-60">

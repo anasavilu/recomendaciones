@@ -210,3 +210,14 @@ export async function removeEntry(entryId: string) {
   const { error } = await supabase.from("entries").delete().eq("id", entryId).eq("owner_id", user.id);
   if (error) throw error;
 }
+
+/** ★ Favorito. Sin refrescar la página: la estrella cambia al momento. */
+export async function setFavorite(entryId: string, value: boolean) {
+  const { supabase, user } = await requireUser();
+  const { error } = await supabase
+    .from("entries")
+    .update({ is_favorite: value })
+    .eq("id", entryId)
+    .eq("owner_id", user.id);
+  if (error) throw error;
+}

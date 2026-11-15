@@ -10,6 +10,7 @@ import { placeDetails, placesEnabled } from "@/lib/catalog/places";
 import { Cover } from "@/components/cover";
 import { RecommendedBy } from "@/components/recommended-by";
 import { EditEntry } from "./edit-entry";
+import { FavoriteStar } from "@/components/favorite-star";
 
 const LINK_LABEL: Record<string, string> = {
   filmaffinity: "Ver en FilmAffinity",
@@ -112,7 +113,10 @@ async function Entry({
       <div className="flex gap-5">
         <Cover src={c.image_url} kind={c.kind} title={c.title} size="lg" />
         <div className="flex min-w-0 flex-col gap-2 pt-1">
-          <h1 className="text-3xl font-semibold leading-tight tracking-tight text-balance">{c.title}</h1>
+          <div className="flex items-start gap-1">
+            <h1 className="flex-1 text-3xl font-semibold leading-tight tracking-tight text-balance">{c.title}</h1>
+            <FavoriteStar entryId={e.id} initial={e.is_favorite} title={c.title} size="lg" />
+          </div>
           {c.original_title && c.original_title !== c.title && (
             <p className="text-sm text-ink-soft italic">{c.original_title}</p>
           )}

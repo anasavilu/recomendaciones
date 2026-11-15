@@ -10,6 +10,7 @@ export type EntryRow = {
   rating: number | null;
   /** 👍 true · 👎 false · sin valorar null */
   would_recommend: boolean | null;
+  is_favorite: boolean;
   notes: string | null;
   created_at: string;
   catalog_items: {
@@ -36,7 +37,7 @@ export type EntryRow = {
 };
 
 export const ENTRY_SELECT =
-  "id,status,rating,would_recommend,notes,created_at,catalog_items(*),entry_tags(tags(id,name)),entry_recommendations(comment,recommenders(id,name,linked:profiles!recommenders_linked_profile_id_fkey(username)))";
+  "id,status,rating,would_recommend,is_favorite,notes,created_at,catalog_items(*),entry_tags(tags(id,name)),entry_recommendations(comment,recommenders(id,name,linked:profiles!recommenders_linked_profile_id_fkey(username)))";
 
 /** Persona que recomienda, tal como se muestra y como se envía en los formularios. */
 export type Person = { token: string; name: string; username: string | null };
