@@ -1,7 +1,9 @@
+import Link from "next/link";
 import type { Person } from "@/lib/entry-format";
 
 /** "Recomendado por Ana @ana y Maribel". Si nadie lo recomendó, no muestra nada. */
-export function RecommendedBy({ people, className = "" }: { people: Person[]; className?: string }) {
+/** `linkUsers`: los @usuarios enlazan a su perfil (no usarlo dentro de otro enlace). */
+export function RecommendedBy({ people, className = "", linkUsers = false }: { people: Person[]; className?: string; linkUsers?: boolean }) {
   if (!people.length) return null;
   return (
     <span className={className}>
@@ -10,7 +12,14 @@ export function RecommendedBy({ people, className = "" }: { people: Person[]; cl
         <span key={p.token}>
           {i > 0 && <span className="font-sans text-[0.8125rem] text-ink-soft">{i === people.length - 1 ? " y " : ", "}</span>}
           <span className="hand">{p.name}</span>
-          {p.username && <span className="font-sans text-[0.8125rem] text-ink-soft"> @{p.username}</span>}
+          {p.username &&
+            (linkUsers ? (
+              <Link href={`/u/${p.username}`} className="font-sans text-[0.8125rem] text-ink-soft underline underline-offset-2">
+                {" "}@{p.username}
+              </Link>
+            ) : (
+              <span className="font-sans text-[0.8125rem] text-ink-soft"> @{p.username}</span>
+            ))}
         </span>
       ))}
     </span>

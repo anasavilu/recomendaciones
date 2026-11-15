@@ -31,7 +31,7 @@ const PLACEHOLDER: Record<Kind, string> = {
 
 type SearchState = { status: "idle" | "loading" | "done" | "error"; results: Candidate[]; catalog: boolean; corrected?: string | null };
 
-export type AddInitial = { kind?: Kind; q?: string; picked?: Candidate; manual?: boolean; assist?: boolean };
+export type AddInitial = { kind?: Kind; q?: string; picked?: Candidate; manual?: boolean; assist?: boolean; from?: Token };
 
 /**
  * Next guarda las pantallas ya visitadas con su estado. Cada vez que se llega a «Nueva recomendación»
@@ -335,6 +335,7 @@ function AddFormInner({
         <>
           <TokenInput
             name="recommenders"
+            initial={initial.from ? [initial.from] : []}
             label="¿Quién te lo ha recomendado?"
             variant="person"
             suggestions={peopleSuggestions}

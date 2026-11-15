@@ -14,11 +14,17 @@ function initialFrom(sp: Record<string, string | string[] | undefined>): AddInit
     return (Array.isArray(v) ? v[0] : v)?.trim() ?? "";
   };
   const kind = KINDS.includes(one("tipo") as Kind) ? (one("tipo") as Kind) : undefined;
+  // Desde el perfil de otro usuario: la recomendación viene de esa persona
+  const deUser = one("de").replace(/^@/, "").toLowerCase();
+  const from = /^[a-z0-9._]{3,24}$/.test(deUser)
+    ? { from: { token: `@${deUser}`, name: one("de_nombre").slice(0, 80) || deUser, username: deUser } }
+    : {};
   const source = one("source") as (typeof SOURCES)[number];
   if (SOURCES.includes(source) && one("source_id") && one("title") && kind) {
     const year = Number(one("year"));
     const img = one("img");
     return {
+      ...from,
       picked: {
         source,
         source_id: one("source_id"),
@@ -31,7 +37,7 @@ function initialFrom(sp: Record<string, string | string[] | undefined>): AddInit
     };
   }
   const q = one("q").slice(0, 200);
-  return { kind, q, manual: Boolean(q), assist: Boolean(q) && one("ayuda") === "1" };
+  return { ...from, kind, q, manual: Boolean(q), assist: Boolean(q) && one("ayuda") === "1" };
 }
 
 export default function NewPage({ searchParams }: PageProps<"/nuevo">) {

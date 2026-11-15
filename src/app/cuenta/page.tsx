@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "../actions";
 import { PasswordForm, ProfileForm } from "./forms";
+import { PrivacyForm } from "../gente/privacy-form";
 
 export default function AccountPage({ searchParams }: PageProps<"/cuenta">) {
   return (
@@ -30,6 +31,14 @@ async function Account({ searchParams }: { searchParams: PageProps<"/cuenta">["s
     .eq("id", auth.user!.id)
     .single();
 
+  // Por separado: si aún no se ha aplicado la migración 0008, el resto de la página funciona igual
+  const { data: privacy } = await supabase.from("profiles").select("is_public,shows").eq("id", auth.user!.id).maybeSingle();
+  const { count: requests } = await supabase
+    .from("follows")
+    .select("follower_id", { count: "exact", head: true })
+    .eq("followee_id", auth.user!.id)
+    .eq("status", "pendiente");
+
   return (
     <div className="flex flex-col gap-10">
       <section className="flex flex-col gap-4">
@@ -45,6 +54,30 @@ async function Account({ searchParams }: { searchParams: PageProps<"/cuenta">["s
         )}
         <ProfileForm name={profile?.display_name ?? ""} username={profile?.username ?? ""} />
         <p className="text-sm text-ink-soft">Correo: {auth.user!.email}</p>
+      </section>
+
+      <section className="flex flex-col gap-3 border-t border-rule pt-8">
+        <h2 className="text-lg font-semibold">Gente</h2>
+        <p className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+          <Link href="/gente" className="underline underline-offset-4">
+            Buscar personas y ver a quién sigues
+          </Link>
+          {requests ? (
+            <Link href="/gente" className="font-semibold text-stamp underline underline-offset-4">
+              {requests === 1 ? "1 solicitud para seguirte" : `${requests} solicitudes para seguirte`}
+            </Link>
+          ) : null}
+          {profile?.username && (
+            <Link href={`/u/${profile.username}`} className="underline underline-offset-4">
+              Ver mi perfil
+            </Link>
+          )}
+        </p>
+      </section>
+
+      <section id="privacidad" className="flex flex-col gap-4 border-t border-rule pt-8">
+        <h2 className="text-lg font-semibold">Privacidad</h2>
+        <PrivacyForm isPublic={privacy?.is_public ?? true} shows={privacy?.shows === "recomendados" ? "recomendados" : "todo"} />
       </section>
 
       <section className="flex flex-col gap-4 border-t border-rule pt-8">

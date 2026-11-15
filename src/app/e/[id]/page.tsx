@@ -145,7 +145,7 @@ async function Entry({
           {timing?.state === "ended" && <p className="text-sm text-ink-soft">Ya terminó</p>}
           {c.creators?.length > 0 && <p className="text-sm">{c.creators.join(", ")}</p>}
           {c.address && <p className="text-sm">{c.address}</p>}
-          <RecommendedBy people={who} className="mt-2 text-2xl" />
+          <RecommendedBy people={who} className="mt-2 text-2xl" linkUsers />
           {e.status === "hecho" && e.would_recommend !== null && (
             <p className="text-sm">{e.would_recommend ? "👍 Lo recomendarías" : "👎 No lo recomendarías"}</p>
           )}
