@@ -269,7 +269,7 @@ export function EntryRow({ entry }: { entry: Row }) {
                 ? `Desmarcar ${label.toLowerCase()}`
                 : `Marcar como ${label.toLowerCase()}`
             }
-            className="grid h-11 w-11 shrink-0 place-items-center"
+            className="flex w-12 shrink-0 flex-col items-center gap-0.5 py-1"
           >
             <span
               aria-hidden
@@ -280,6 +280,10 @@ export function EntryRow({ entry }: { entry: Row }) {
               }`}
             >
               ✓
+            </span>
+            {/* La palabra debajo del círculo: "Visto", "Leído", "Ido" */}
+            <span aria-hidden className={`text-[0.6875rem] leading-none ${done ? "text-stamp" : "invisible"}`}>
+              {label}
             </span>
           </button>
         </div>

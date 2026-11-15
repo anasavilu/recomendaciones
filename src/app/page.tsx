@@ -124,6 +124,8 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
       (!f.etiqueta || e.entry_tags.some((t) => norm(t.tags.name) === norm(f.etiqueta!))),
   );
   const filtering = Boolean(f.genero || f.plataforma || f.de || f.etiqueta);
+  // "Ver en mapa" solo en las secciones con ubicación
+  const hasMap = f.kind === "restaurante" || f.kind === "lugar" || f.kind === "evento";
   const deName = f.de ? (people.find((p) => p.token === f.de)?.name ?? f.de.replace(/^@/, "")) : null;
 
   const chips = (
@@ -136,12 +138,6 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
             {KIND_PLURAL[k]}
           </Chip>
         ))}
-              <NavLink
-          href={f.kind && ["restaurante", "lugar", "evento"].includes(f.kind) ? `/mapa?tipo=${f.kind}` : "/mapa"}
-          className="shrink-0 rounded-full border border-stamp px-3 py-1 text-[0.8125rem] leading-5 text-stamp"
-        >
-          Mapa
-        </NavLink>
       </nav>
   );
 
@@ -212,7 +208,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
         </div>
       )}
 
-      {facetUI.length > 0 && (
+      {(facetUI.length > 0 || hasMap) && (
         <div aria-label="Filtros" role="group" className="mt-3 flex flex-wrap items-center gap-2">
           {facetUI.map((fc) => (
             <FacetSelect
@@ -227,6 +223,14 @@ async function Content({ searchParams }: { searchParams: PageProps<"/">["searchP
           {filtering && (
             <Link href={href(f, { genero: null, plataforma: null, de: null, etiqueta: null })} className="text-sm text-ink-soft underline underline-offset-4">
               Quitar filtros
+            </Link>
+          )}
+          {hasMap && (
+            <Link
+              href={`/mapa?tipo=${f.kind}${f.view === "pendientes" ? "" : "&ver=todo"}`}
+              className="ml-auto inline-flex items-center gap-1 text-sm text-stamp underline underline-offset-4"
+            >
+              Ver en mapa
             </Link>
           )}
         </div>
