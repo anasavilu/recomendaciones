@@ -1,3 +1,4 @@
+import type { Token } from "@/components/token-input";
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { norm } from "./text";
@@ -144,15 +145,29 @@ export async function addEntryRecommenders(
 
 /** Etiquetas y personas ya usadas, para sugerirlas en los formularios. */
 export async function loadSuggestions(supabase: SupabaseClient) {
-  const [{ data: tags }, { data: people }] = await Promise.all([
+  const { data: auth } = await supabase.auth.getUser();
+  const me = auth.user?.id ?? "";
+  const profile = "id,username,display_name";
+  const [{ data: tags }, { data: people }, { data: following }, { data: followers }] = await Promise.all([
     supabase.from("tags").select("name").order("name"),
     supabase
       .from("recommenders")
       .select("id,name,linked:profiles!recommenders_linked_profile_id_fkey(username)")
       .order("name"),
+    // Gente que sigues y que te sigue: lo primero que se propone en «Recomendado por»
+    supabase.from("follows").select(`p:profiles!follows_followee_id_fkey(${profile})`).eq("follower_id", me).eq("status", "aceptado"),
+    supabase.from("follows").select(`p:profiles!follows_follower_id_fkey(${profile})`).eq("followee_id", me).eq("status", "aceptado"),
   ]);
+  type P = { username: string | null; display_name: string };
+  const network = new Map<string, Token>();
+  for (const r of [...(following ?? []), ...(followers ?? [])] as unknown as { p: P | null }[])
+    if (r.p?.username && !network.has(r.p.username))
+      network.set(r.p.username, { token: `@${r.p.username}`, name: r.p.display_name, username: r.p.username, network: true });
+  const used = ((people ?? []) as unknown as EntryRow["entry_recommendations"][number]["recommenders"][])
+    .map(personOf)
+    .filter((x) => !x.username || !network.has(x.username));
   return {
     tags: (tags ?? []).map((t) => ({ token: t.name as string, name: t.name as string })),
-    people: ((people ?? []) as unknown as EntryRow["entry_recommendations"][number]["recommenders"][]).map(personOf),
+    people: [...[...network.values()].sort((a, b) => a.name.localeCompare(b.name, "es")), ...used] as Token[],
   };
 }

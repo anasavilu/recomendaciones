@@ -5,9 +5,9 @@ import { useEffect, useId, useRef, useState } from "react";
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 
 /** Valor del campo. En personas, `token` es "@usuario" si es alguien de la app o el nombre libre si no. */
-export type Token = { token: string; name: string; username?: string | null };
+export type Token = { token: string; name: string; username?: string | null; network?: boolean };
 
-type Option = { key: string; label: React.ReactNode; value: Token; group: "nuevo" | "usuarios" | "usados" };
+type Option = { key: string; label: React.ReactNode; value: Token; group: "nuevo" | "red" | "usuarios" | "usados" };
 
 /**
  * Lista de valores (etiquetas o personas). Mientras escribes, un desplegable propone:
@@ -76,14 +76,18 @@ export function TokenInput({
   };
 
   // Opciones del desplegable
-  const userHits = lookingForUsers && users.q === q ? users.results.filter((u) => !has(u.token)) : [];
+  const matches = (s: Token) => !nq || norm(s.name).includes(nq) || (s.username ?? "").includes(nq);
+  // Gente que sigues o que te sigue va primero, luego el resto de usuarios y lo ya usado
+  const network = suggestions.filter((s) => s.network && !has(s.token) && matches(s)).slice(0, 6);
+  const userHits =
+    lookingForUsers && users.q === q ? users.results.filter((u) => !has(u.token) && !network.some((n) => n.token === u.token)) : [];
   const used = suggestions
-    .filter((s) => !has(s.token) && !userHits.some((u) => u.token === s.token))
-    .filter((s) => !nq || norm(s.name).includes(nq) || (s.username ?? "").includes(nq))
+    .filter((s) => !s.network && !has(s.token) && !userHits.some((u) => u.token === s.token))
+    .filter(matches)
     .slice(0, 6);
-  const exactExisting = [...userHits, ...used].some((o) => norm(o.name) === nq || o.username === nq);
-  const options: Option[] = [
-    ...(q && !exactExisting && !has(asFree(q).token)
+  const exactExisting = [...network, ...userHits, ...used].some((o) => norm(o.name) === nq || o.username === nq);
+  const newOption: Option[] = [
+    ...(asFree(q).name && !exactExisting && !has(asFree(q).token)
       ? [
           {
             key: "nuevo",
@@ -98,6 +102,18 @@ export function TokenInput({
           },
         ]
       : []),
+  ];
+  const found: Option[] = [
+    ...network.map((u) => ({
+      key: `r:${u.token}`,
+      group: "red" as const,
+      value: u,
+      label: (
+        <>
+          {u.name} <span className="text-ink-soft">{u.token}</span>
+        </>
+      ),
+    })),
     ...userHits.map((u) => ({
       key: `u:${u.token}`,
       group: "usuarios" as const,
@@ -120,6 +136,8 @@ export function TokenInput({
       ),
     })),
   ];
+  // Si se empieza por @ se busca a un usuario: «Añadir como nombre» va al final
+  const options: Option[] = q.startsWith("@") ? [...found, ...newOption] : [...newOption, ...found];
   const showList = open && options.length > 0;
   const current = Math.min(active, Math.max(options.length - 1, 0));
 
@@ -171,7 +189,7 @@ export function TokenInput({
               setOpen(false);
               // Si se sale del campo con algo escrito, se guarda tal cual para no perderlo
               if (q) {
-                if (!has(asFree(q).token)) setValues((xs) => [...xs, asFree(q)]);
+                if (asFree(q).name && !has(asFree(q).token)) setValues((xs) => [...xs, asFree(q)]);
                 setText("");
               }
             }}
@@ -193,7 +211,7 @@ export function TokenInput({
               } else if (e.key === "Enter") {
                 e.preventDefault();
                 if (showList) add(options[current].value);
-                else if (q) add(asFree(q));
+                else if (asFree(q).name) add(asFree(q));
               } else if (e.key === "Escape") {
                 setOpen(false);
               } else if (e.key === "Backspace" && !text && values.length) {
@@ -216,8 +234,10 @@ export function TokenInput({
             {options.map((o, i) => {
               const header =
                 (i === 0 || options[i - 1].group !== o.group) && o.group !== "nuevo"
-                  ? o.group === "usuarios"
-                    ? "Usuarios de Recomendados"
+                  ? o.group === "red"
+                    ? "Gente que sigues"
+                    : o.group === "usuarios"
+                    ? "Otros usuarios de Recomendados"
                     : variant === "person"
                       ? "Ya te han recomendado"
                       : "Tus etiquetas"
